@@ -1,0 +1,7 @@
+{
+  "soilTypes": [
+    {"id": "sandy", "name": "Sandy Soil", "infiltrationRate": "High", "adjustment": 1.1},
+    {"id": "loamy", "name": "Loamy Soil", "infiltrationRate": "Medium", "adjustment": 1.0},
+    {"id": "clay", "name": "Clay Soil", "infiltrationRate": "Low", "adjustment": 0.9}
+  ]
+}
