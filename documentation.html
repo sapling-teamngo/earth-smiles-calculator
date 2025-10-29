@@ -2,33 +2,232 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Documentation - Earth Smiles Calculator</title>
+    <link rel="stylesheet" href="css/style.css">
     <style>
-        .equation { background: #f5f5f5; padding: 15px; margin: 10px 0; border-left: 4px solid #007cba; }
-        .source { color: #666; font-style: italic; }
+        .equation-card {
+            background: white;
+            padding: 2rem;
+            margin: 1rem 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+        .equation {
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+        .source {
+            color: #666;
+            font-style: italic;
+            border-top: 1px solid #eee;
+            padding-top: 1rem;
+            margin-top: 1rem;
+        }
+        .parameter-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        .parameter-table th, .parameter-table td {
+            border: 1px solid #ddd;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        .parameter-table th {
+            background: #f8f9fa;
+        }
     </style>
 </head>
 <body>
-    <h1>Technical Documentation</h1>
-    
-    <section id="wocat-principles">
-        <h2>WOCAT Design Principles</h2>
-        <div class="equation">
-            <h3>Structure Diameter Calculation</h3>
-            <p><strong>Equation:</strong> D = 4.0 × S<sub>f</sub> × min(R<sub>f</sub>, 1.2)</p>
-            <p><strong>Where:</strong></p>
+    <header>
+        <nav>
+            <div class="logo">🌍 Earth Smiles Calculator</div>
             <ul>
-                <li>D<sub>base</sub> = 4.0 m (Base diameter from WOCAT Benin)</li>
-                <li>S<sub>f</sub> = Slope factor (0.6-1.0)</li>
-                <li>R<sub>f</sub> = Rainfall factor (rainfall/1025)</li>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="index.html" onclick="showSection('calculator')">Calculator</a></li>
+                <li><a href="documentation.html" class="active">Documentation</a></li>
+                <li><a href="research.html">Research</a></li>
+                <li><a href="ar.html">العربية</a></li>
             </ul>
-            <p class="source">Source: WOCAT Benin Case Study, Pages 1-2</p>
-        </div>
-    </section>
+        </nav>
+    </header>
 
-    <section id="fao-equations">
-        <h2>FAO Water Harvesting Equations</h2>
-        <!-- Additional equations from FAO manual -->
-    </section>
+    <main>
+        <section class="section active">
+            <div class="calculator-container">
+                <h1>Technical Documentation</h1>
+                
+                <section id="introduction">
+                    <h2>Introduction</h2>
+                    <p>This documentation provides the technical basis for the Earth Smiles Calculator, which designs semicircular bunds for water harvesting based on WOCAT (World Overview of Conservation Approaches and Technologies) methodologies.</p>
+                </section>
+
+                <section id="wocat-basis">
+                    <h2>WOCAT Methodology Basis</h2>
+                    <p>The design parameters are primarily derived from the WOCAT Benin case study "The Half-Moon Technique" which documents successful implementation in West Africa.</p>
+                    
+                    <div class="equation-card">
+                        <h3>Key WOCAT Parameters</h3>
+                        <table class="parameter-table">
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Value</th>
+                                <th>Source</th>
+                            </tr>
+                            <tr>
+                                <td>Base Diameter</td>
+                                <td>4.0 meters</td>
+                                <td>WOCAT Benin, Page 1</td>
+                            </tr>
+                            <tr>
+                                <td>Digging Depth</td>
+                                <td>15-20 cm</td>
+                                <td>WOCAT Establishment, Page 2</td>
+                            </tr>
+                            <tr>
+                                <td>Bund Height</td>
+                                <td>Up to 40 cm</td>
+                                <td>WOCAT Technical Specifications, Page 2</td>
+                            </tr>
+                            <tr>
+                                <td>Spacing Between Rows</td>
+                                <td>4.0 meters</td>
+                                <td>WOCAT Layout, Page 2</td>
+                            </tr>
+                            <tr>
+                                <td>Structures per Hectare</td>
+                                <td>625 (for 4m diameter)</td>
+                                <td>WOCAT Calculations, Page 2</td>
+                            </tr>
+                        </table>
+                    </div>
+                </section>
+
+                <section id="design-equations">
+                    <h2>Design Equations</h2>
+                    
+                    <div class="equation-card">
+                        <h3>1. Structure Diameter Calculation</h3>
+                        <div class="equation">
+                            D = D<sub>base</sub> × S<sub>f</sub> × R<sub>f</sub> × Soil<sub>f</sub> × Land<sub>f</sub>
+                        </div>
+                        <p><strong>Where:</strong></p>
+                        <ul>
+                            <li>D<sub>base</sub> = 4.0 m (Base diameter from WOCAT Benin)</li>
+                            <li>S<sub>f</sub> = Slope adjustment factor (0.6-1.0)</li>
+                            <li>R<sub>f</sub> = Rainfall adjustment factor (rainfall/1025)</li>
+                            <li>Soil<sub>f</sub> = Soil type factor (0.9-1.1)</li>
+                            <li>Land<sub>f</sub> = Land use factor (0.9-1.2)</li>
+                        </ul>
+                        <div class="source">
+                            Source: Adapted from WOCAT Benin Case Study, Pages 1-2
+                        </div>
+                    </div>
+
+                    <div class="equation-card">
+                        <h3>2. Bund Height Calculation</h3>
+                        <div class="equation">
+                            H = 0.3 + (slope × 0.008)
+                        </div>
+                        <p><strong>Constraints:</strong> Minimum 0.3m, Maximum 0.7m</p>
+                        <p>Higher bunds are required on steeper slopes to effectively retain water.</p>
+                        <div class="source">
+                            Source: WOCAT Technical Specifications, Page 2
+                        </div>
+                    </div>
+
+                    <div class="equation-card">
+                        <h3>3. Structures per Hectare</h3>
+                        <div class="equation">
+                            N = 10000 / (A<sub>semicircle</sub> + S × D × 0.5)
+                        </div>
+                        <p><strong>Where:</strong></p>
+                        <ul>
+                            <li>A<sub>semicircle</sub> = π × (D/2)² / 2</li>
+                            <li>S = Spacing between rows (4.0m)</li>
+                            <li>D = Structure diameter</li>
+                        </ul>
+                        <div class="source">
+                            Source: FAO Water Harvesting Manual, Section 4.3
+                        </div>
+                    </div>
+                </section>
+
+                <section id="adjustment-factors">
+                    <h2>Adjustment Factors</h2>
+                    
+                    <div class="equation-card">
+                        <h3>Slope Adjustment Factors</h3>
+                        <table class="parameter-table">
+                            <tr>
+                                <th>Slope Range (%)</th>
+                                <th>Adjustment Factor</th>
+                                <th>Rationale</th>
+                            </tr>
+                            <tr>
+                                <td>0-2% (Flat)</td>
+                                <td>1.0</td>
+                                <td>Standard conditions</td>
+                            </tr>
+                            <tr>
+                                <td>2-5% (Gentle)</td>
+                                <td>0.95</td>
+                                <td>Minor reduction for increased runoff</td>
+                            </tr>
+                            <tr>
+                                <td>5-10% (Moderate)</td>
+                                <td>0.9</td>
+                                <td>Moderate reduction</td>
+                            </tr>
+                            <tr>
+                                <td>10-15% (Rolling)</td>
+                                <td>0.85</td>
+                                <td>Significant reduction needed</td>
+                            </tr>
+                            <tr>
+                                <td>15-25% (Hilly)</td>
+                                <td>0.75</td>
+                                <td>Major reduction for steep slopes</td>
+                            </tr>
+                            <tr>
+                                <td>>25% (Steep)</td>
+                                <td>0.6</td>
+                                <td>Maximum reduction</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="equation-card">
+                        <h3>Rainfall Adjustment Factors</h3>
+                        <p>Rainfall factor = min(rainfall / 1025, 1.2)</p>
+                        <p>Where 1025mm is the reference rainfall from WOCAT Benin case study.</p>
+                    </div>
+                </section>
+
+                <section id="implementation-protocol">
+                    <h2>Implementation Protocol</h2>
+                    <p>Based on WOCAT Benin establishment activities (Page 2):</p>
+                    <ol>
+                        <li><strong>Demarcation:</strong> Use compass with 2-meter radius to create semicircle</li>
+                        <li><strong>Excavation:</strong> Dig to depth of 15-20 cm using pick, pickaxe, and shovel</li>
+                        <li><strong>Ridge Construction:</strong> Build ridges from inside outward, height up to 40 cm</li>
+                        <li><strong>Layout:</strong> Arrange in staggered pattern following contour lines</li>
+                        <li><strong>Spacing:</strong> Maintain 4-meter spacing between rows</li>
+                        <li><strong>Enrichment:</strong> Add 35 kg of compost or manure per structure</li>
+                        <li><strong>Mulching:</strong> Apply mulch to minimize moisture loss</li>
+                    </ol>
+                </section>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Earth Smiles Calculator. Based on WOCAT methodologies.</p>
+    </footer>
 </body>
 </html>
