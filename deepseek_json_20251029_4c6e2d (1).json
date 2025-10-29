@@ -1,0 +1,16 @@
+{
+  "name": "earth-smiles-calculator",
+  "version": "1.0.0",
+  "description": "Semicircular bunds design tool based on WOCAT methodology",
+  "main": "index.html",
+  "scripts": {
+    "start": "live-server --port=3000",
+    "build": "echo 'No build process needed'"
+  },
+  "keywords": ["water-harvesting", "wocat", "semicircular-bunds", "agriculture"],
+  "author": "Omar Yaseen, Mariam Najajrah, Hanadi Yosuf",
+  "license": "MIT",
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  }
+}
