@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earth Smiles Calculator - Sustainable Water Harvesting</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">🌍 Earth Smiles Calculator</div>
+            <ul>
+                <li><a href="#" onclick="showSection('home')">Home</a></li>
+                <li><a href="#" onclick="showSection('calculator')">Calculator</a></li>
+                <li><a href="documentation.html">Documentation</a></li>
+                <li><a href="research.html">Research</a></li>
+                <li><a href="ar.html">العربية</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Home Section -->
+        <section id="home" class="active">
+            <div class="hero">
+                <h1>Earth Smiles Calculator</h1>
+                <p>Design optimal semicircular bunds for water harvesting and soil conservation</p>
+                <button onclick="showSection('calculator')">Start Calculation</button>
+            </div>
+        </section>
+
+        <!-- Calculator Section -->
+        <section id="calculator">
+            <div class="calculator-container">
+                <div class="progress-bar">
+                    <div class="step active" data-step="1">Area Input</div>
+                    <div class="step" data-step="2">Climate Data</div>
+                    <div class="step" data-step="3">Results</div>
+                    <div class="step" data-step="4">Visualization</div>
+                </div>
+
+                <!-- Step 1: Area Input -->
+                <div class="step-content active" id="step1">
+                    <h2>Step 1: Define Your Area</h2>
+                    <div class="input-methods">
+                        <div class="method-card" onclick="selectMethod('map')">
+                            <h3>🗺️ Map Selection</h3>
+                            <p>Click points on map to define polygon</p>
+                        </div>
+                        <div class="method-card" onclick="selectMethod('manual')">
+                            <h3>📝 Manual Input</h3>
+                            <p>Enter coordinates manually</p>
+                        </div>
+                        <div class="method-card" onclick="selectMethod('simple')">
+                            <h3>📐 Simple Input</h3>
+                            <p>Enter area and slope directly</p>
+                        </div>
+                    </div>
+
+                    <div id="map-container" class="hidden">
+                        <div id="map"></div>
+                        <button onclick="calculateAreaFromMap()">Calculate Area & Slope</button>
+                    </div>
+
+                    <div id="manual-input" class="hidden">
+                        <h3>Enter Coordinates</h3>
+                        <div id="coordinate-inputs"></div>
+                        <button onclick="addCoordinate()">Add Coordinate</button>
+                        <button onclick="calculateAreaFromCoords()">Calculate</button>
+                    </div>
+
+                    <div id="simple-input" class="hidden">
+                        <h3>Direct Input</h3>
+                        <label>Total Area (hectares): <input type="number" id="total-area" step="0.1"></label>
+                        <label>Average Slope (%): <input type="number" id="avg-slope" step="0.1"></label>
+                        <button onclick="proceedToStep2()">Next</button>
+                    </div>
+
+                    <div id="step1-results" class="hidden">
+                        <h3>Area Analysis Complete</h3>
+                        <p>Total Area: <span id="calculated-area">0</span> hectares</p>
+                        <p>Average Slope: <span id="calculated-slope">0</span>%</p>
+                        <button onclick="proceedToStep2()">Continue to Step 2</button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Climate Data -->
+                <div class="step-content" id="step2">
+                    <h2>Step 2: Climate & Soil Data</h2>
+                    <form id="climate-form">
+                        <div class="form-group">
+                            <label>Annual Rainfall (mm): <input type="number" id="rainfall" required></label>
+                            <small>Source: WOCAT Benin data shows 1025mm average</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Soil Type:</label>
+                            <select id="soil-type">
+                                <option value="sandy">Sandy</option>
+                                <option value="loamy">Loamy</option>
+                                <option value="clay">Clay</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Land Use:</label>
+                            <select id="land-use">
+                                <option value="orchard">Fruit Orchard</option>
+                                <option value="pasture">Pasture</option>
+                                <option value="cropland">Cropland</option>
+                            </select>
+                        </div>
+                        <button type="button" onclick="calculateDesign()">Calculate Design</button>
+                    </form>
+                </div>
+
+                <!-- Step 3: Results -->
+                <div class="step-content" id="step3">
+                    <h2>Step 3: Earth Smile Design Results</h2>
+                    <div id="results-container"></div>
+                    <button onclick="proceedToStep4()">View Visualization</button>
+                </div>
+
+                <!-- Step 4: Visualization -->
+                <div class="step-content" id="step4">
+                    <h2>Step 4: Design Visualization</h2>
+                    <div id="visualization-container">
+                        <canvas id="design-canvas" width="800" height="400"></canvas>
+                        <div id="layout-preview"></div>
+                    </div>
+                    <button onclick="generateReport()">Generate Project Report</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/map-handler.js"></script>
+    <script src="js/calculator.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
