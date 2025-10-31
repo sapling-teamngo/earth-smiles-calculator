@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Terrain Slope Analysis Tool</title>
     <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/numeric/1.2.6/numeric.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -17,75 +16,84 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 20px;
+            padding: 15px;
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
             background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             overflow: hidden;
         }
 
         .header {
             background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
             color: white;
-            padding: 30px;
+            padding: 20px;
             text-align: center;
         }
 
         .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
+            font-size: clamp(1.5em, 4vw, 2.2em);
+            margin-bottom: 8px;
             font-weight: 300;
         }
 
         .header p {
-            font-size: 1.1em;
+            font-size: clamp(0.9em, 2.5vw, 1em);
             opacity: 0.9;
         }
 
         .content {
-            display: grid;
-            grid-template-columns: 400px 1fr;
-            gap: 20px;
-            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 15px;
+        }
+
+        @media (min-width: 768px) {
+            .content {
+                flex-direction: row;
+            }
         }
 
         .input-section {
             background: #f8f9fa;
-            padding: 25px;
+            padding: 20px;
             border-radius: 10px;
             border: 1px solid #e9ecef;
+            min-width: 300px;
         }
 
         .input-group {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         .input-group label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             font-weight: 600;
             color: #2c3e50;
+            font-size: 0.9em;
         }
 
         .coordinate-input {
             display: grid;
             grid-template-columns: 1fr 1fr auto;
-            gap: 10px;
-            margin-bottom: 10px;
+            gap: 8px;
+            margin-bottom: 8px;
             align-items: center;
         }
 
         .coordinate-input input {
-            padding: 10px;
+            padding: 8px;
             border: 2px solid #e9ecef;
             border-radius: 5px;
             font-size: 14px;
             transition: border-color 0.3s;
+            width: 100%;
         }
 
         .coordinate-input input:focus {
@@ -97,17 +105,18 @@
             background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
             color: white;
             border: none;
-            padding: 12px 20px;
+            padding: 10px 15px;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
             transition: all 0.3s;
+            white-space: nowrap;
         }
 
         .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(52, 152, 219, 0.3);
         }
 
         .btn-danger {
@@ -121,92 +130,128 @@
         .buttons {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 20px;
+            gap: 8px;
+            margin-top: 15px;
         }
 
         .coordinates-list {
-            max-height: 200px;
+            max-height: 150px;
             overflow-y: auto;
             border: 1px solid #e9ecef;
             border-radius: 5px;
-            padding: 10px;
+            padding: 8px;
             background: white;
-            margin-top: 10px;
+            margin-top: 8px;
+            font-size: 0.85em;
         }
 
         .coordinate-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px;
+            padding: 6px;
             border-bottom: 1px solid #f1f1f1;
+            font-size: 0.8em;
         }
 
         .coordinate-item:last-child {
             border-bottom: none;
         }
 
+        .remove-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 3px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.7em;
+        }
+
         .results-section {
-            display: grid;
-            grid-template-rows: auto 1fr;
-            gap: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-height: 0;
         }
 
         .stats-panel {
             background: #f8f9fa;
-            padding: 20px;
+            padding: 15px;
             border-radius: 10px;
             border: 1px solid #e9ecef;
         }
 
+        .stats-panel h3 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+            font-size: 1.1em;
+        }
+
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
         }
 
         .stat-card {
             background: white;
-            padding: 15px;
-            border-radius: 8px;
+            padding: 12px;
+            border-radius: 6px;
             border-left: 4px solid #3498db;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         .stat-card h4 {
             color: #7f8c8d;
-            font-size: 0.9em;
-            margin-bottom: 5px;
+            font-size: 0.75em;
+            margin-bottom: 4px;
         }
 
         .stat-card p {
-            font-size: 1.4em;
+            font-size: 1.1em;
             font-weight: bold;
             color: #2c3e50;
         }
 
         .plots-container {
+            flex: 1;
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            height: 600px;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            min-height: 400px;
+        }
+
+        @media (min-width: 1024px) {
+            .plots-container {
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: 1fr 1fr;
+            }
         }
 
         .plot {
             background: white;
-            border-radius: 10px;
+            border-radius: 8px;
             border: 1px solid #e9ecef;
-            padding: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 12px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
         }
 
         .plot-title {
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             color: #2c3e50;
             font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .plot-content {
+            flex: 1;
+            min-height: 250px;
         }
 
         .loading {
@@ -214,15 +259,18 @@
             text-align: center;
             padding: 20px;
             color: #3498db;
+            background: white;
+            border-radius: 8px;
+            margin: 10px 0;
         }
 
         .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 2s linear infinite;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
             margin: 0 auto 10px;
         }
 
@@ -234,33 +282,83 @@
         .error {
             background: #e74c3c;
             color: white;
-            padding: 10px;
+            padding: 8px;
             border-radius: 5px;
-            margin: 10px 0;
+            margin: 8px 0;
             display: none;
+            font-size: 0.85em;
         }
 
         .success {
             background: #27ae60;
             color: white;
-            padding: 10px;
+            padding: 8px;
             border-radius: 5px;
-            margin: 10px 0;
+            margin: 8px 0;
             display: none;
+            font-size: 0.85em;
+        }
+
+        /* Mobile-specific adjustments */
+        @media (max-width: 767px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                border-radius: 8px;
+            }
+            
+            .content {
+                padding: 10px;
+                gap: 10px;
+            }
+            
+            .input-section {
+                padding: 15px;
+            }
+            
+            .coordinate-input {
+                grid-template-columns: 1fr;
+                gap: 5px;
+            }
+            
+            .coordinate-input input {
+                font-size: 16px; /* Better for mobile touch */
+            }
+            
+            .plots-container {
+                min-height: 300px;
+            }
+            
+            .plot {
+                min-height: 250px;
+            }
+        }
+
+        /* Very small screens */
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .buttons {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🌄 Terrain Slope Analysis Tool</h1>
-            <p>Input polygon coordinates to analyze elevation, slope directions, and terrain characteristics</p>
+            <h1>🌄 Terrain Slope Analysis</h1>
+            <p>Input polygon coordinates to analyze elevation and slope characteristics</p>
         </div>
 
         <div class="content">
             <div class="input-section">
                 <div class="input-group">
-                    <label>Enter Polygon Coordinates (Longitude, Latitude):</label>
+                    <label>Enter Coordinates (Lon, Lat):</label>
                     <div class="coordinate-input">
                         <input type="number" id="longitude" placeholder="Longitude" step="any" value="36.228512">
                         <input type="number" id="latitude" placeholder="Latitude" step="any" value="32.339083">
@@ -277,7 +375,7 @@
                 </div>
 
                 <div class="input-group">
-                    <label>Or use sample data:</label>
+                    <label>Quick start:</label>
                     <button class="btn" onclick="loadSampleData()" style="width: 100%;">Load Sample Polygon</button>
                 </div>
 
@@ -287,7 +385,7 @@
 
             <div class="results-section">
                 <div class="stats-panel">
-                    <h3>Terrain Analysis Results</h3>
+                    <h3>Analysis Results</h3>
                     <div class="stats-grid" id="statsGrid">
                         <div class="stat-card">
                             <h4>Area</h4>
@@ -310,25 +408,25 @@
 
                 <div class="loading" id="loading">
                     <div class="spinner"></div>
-                    <p>Analyzing terrain... This may take a few seconds.</p>
+                    <p>Analyzing terrain...</p>
                 </div>
 
                 <div class="plots-container">
                     <div class="plot">
                         <div class="plot-title">Elevation Map</div>
-                        <div id="elevationPlot"></div>
+                        <div class="plot-content" id="elevationPlot"></div>
                     </div>
                     <div class="plot">
-                        <div class="plot-title">Slope Direction Analysis</div>
-                        <div id="slopePlot"></div>
+                        <div class="plot-title">Slope Vectors</div>
+                        <div class="plot-content" id="slopeVectorsPlot"></div>
                     </div>
                     <div class="plot">
                         <div class="plot-title">Slope Steepness</div>
-                        <div id="steepnessPlot"></div>
+                        <div class="plot-content" id="steepnessPlot"></div>
                     </div>
                     <div class="plot">
-                        <div class="plot-title">3D Terrain Surface</div>
-                        <div id="3dPlot"></div>
+                        <div class="plot-title">Slope Directions</div>
+                        <div class="plot-content" id="slopePlot"></div>
                     </div>
                 </div>
             </div>
@@ -365,10 +463,10 @@
                 [36.229528, 32.336575],
                 [36.232664, 32.338719],
                 [36.231379, 32.339703],
-                [36.228512, 32.339083] // Close the polygon
+                [36.228512, 32.339083]
             ];
             updateCoordinatesList();
-            showSuccess('Sample polygon loaded successfully!');
+            showSuccess('Sample polygon loaded! Click "Analyze Terrain"');
         }
 
         function updateCoordinatesList() {
@@ -379,8 +477,8 @@
                 const item = document.createElement('div');
                 item.className = 'coordinate-item';
                 item.innerHTML = `
-                    <span>Point ${index + 1}: ${coord[0].toFixed(6)}, ${coord[1].toFixed(6)}</span>
-                    <button class="btn btn-danger" onclick="removeCoordinate(${index})" style="padding: 5px 10px; font-size: 12px;">Remove</button>
+                    <span>${index + 1}: ${coord[0].toFixed(6)}, ${coord[1].toFixed(6)}</span>
+                    <button class="remove-btn" onclick="removeCoordinate(${index})">×</button>
                 `;
                 list.appendChild(item);
             });
@@ -421,7 +519,7 @@
                 return;
             }
 
-            // Close the polygon if not already closed
+            // Close the polygon
             if (coordinates.length > 0) {
                 const first = coordinates[0];
                 const last = coordinates[coordinates.length - 1];
@@ -432,37 +530,25 @@
 
             document.getElementById('loading').style.display = 'block';
             
-            // Simulate processing time
             setTimeout(() => {
                 performTerrainAnalysis();
                 document.getElementById('loading').style.display = 'none';
-            }, 1000);
+            }, 800);
         }
 
         function performTerrainAnalysis() {
-            // Calculate area and perimeter
             const { area, perimeter } = calculatePolygonArea(coordinates);
-            
-            // Generate elevation data
             const elevationData = generateElevationData(coordinates);
-            
-            // Calculate slopes
-            const { slope, aspect } = calculateSlopes(elevationData);
-            
-            // Analyze slope directions
+            const { slope, aspect, slopeVectors } = calculateSlopesAndVectors(elevationData);
             const slopeStats = analyzeSlopeDirections(slope, aspect);
             
-            // Update statistics
             updateStatistics(area, perimeter, elevationData, slopeStats);
+            createPlots(elevationData, slope, aspect, slopeStats, slopeVectors);
             
-            // Create plots
-            createPlots(elevationData, slope, aspect, slopeStats);
-            
-            showSuccess('Terrain analysis completed successfully!');
+            showSuccess('Analysis complete!');
         }
 
         function calculatePolygonArea(coords) {
-            // Using shoelace formula
             let area = 0;
             let perimeter = 0;
             const n = coords.length;
@@ -472,14 +558,12 @@
                 area += coords[i][0] * coords[j][1];
                 area -= coords[j][0] * coords[i][1];
                 
-                // Calculate distance for perimeter
                 const dx = (coords[j][0] - coords[i][0]) * 111320 * Math.cos(Math.PI * coords[i][1] / 180);
                 const dy = (coords[j][1] - coords[i][1]) * 110540;
                 perimeter += Math.sqrt(dx * dx + dy * dy);
             }
             
             area = Math.abs(area) / 2 * 111320 * 110540;
-            
             return { area, perimeter };
         }
 
@@ -492,7 +576,7 @@
             const minLat = Math.min(...lats);
             const maxLat = Math.max(...lats);
             
-            const gridSize = 25;
+            const gridSize = 20; // Smaller for better performance
             const lonGrid = [];
             const latGrid = [];
             const elevation = [];
@@ -503,23 +587,22 @@
                 elevation[i] = [];
                 
                 for (let j = 0; j < gridSize; j++) {
-                    // Create realistic elevation pattern
                     const baseElev = 680;
                     const distX = (lonGrid[i] - minLon) / (maxLon - minLon);
                     const distY = (latGrid[j] - minLat) / (maxLat - minLat);
-                    
-                    elevation[i][j] = baseElev + 8 * (0.7 - 0.4 * distX + 0.3 * distY) + Math.random() * 0.5;
+                    elevation[i][j] = baseElev + 8 * (0.8 - 0.6 * distX + 0.4 * distY) + Math.random() * 0.3;
                 }
             }
             
             return { lonGrid, latGrid, elevation, minLon, maxLon, minLat, maxLat };
         }
 
-        function calculateSlopes(elevationData) {
+        function calculateSlopesAndVectors(elevationData) {
             const { elevation, lonGrid, latGrid } = elevationData;
             const gridSize = elevation.length;
             const slope = [];
             const aspect = [];
+            const slopeVectors = { u: [], v: [], x: [], y: [] };
             
             const latCenter = (elevationData.minLat + elevationData.maxLat) / 2;
             const latToM = 111320;
@@ -555,7 +638,23 @@
                 }
             }
             
-            return { slope, aspect };
+            const skip = 2;
+            for (let i = skip; i < gridSize - skip; i += skip) {
+                for (let j = skip; j < gridSize - skip; j += skip) {
+                    const aspectRad = aspect[i][j] * Math.PI / 180;
+                    const magnitude = slope[i][j];
+                    const downhillRad = aspectRad + Math.PI;
+                    const u = Math.sin(downhillRad) * magnitude * 0.5;
+                    const v = Math.cos(downhillRad) * magnitude * 0.5;
+                    
+                    slopeVectors.x.push(lonGrid[i]);
+                    slopeVectors.y.push(latGrid[j]);
+                    slopeVectors.u.push(u);
+                    slopeVectors.v.push(v);
+                }
+            }
+            
+            return { slope, aspect, slopeVectors };
         }
 
         function analyzeSlopeDirections(slope, aspect) {
@@ -566,12 +665,9 @@
             };
             
             const stats = {};
-            let totalPoints = 0;
-            
-            // Flatten arrays and count directions
             const flatAspect = aspect.flat();
             const flatSlope = slope.flat();
-            totalPoints = flatAspect.length;
+            const totalPoints = flatAspect.length;
             
             Object.keys(directionBins).forEach(dir => {
                 const [low, high] = directionBins[dir];
@@ -605,25 +701,31 @@
         }
 
         function updateStatistics(area, perimeter, elevationData, slopeStats) {
-            document.getElementById('areaValue').textContent = `${(area/10000).toFixed(2)} ha`;
+            document.getElementById('areaValue').textContent = `${(area/10000).toFixed(1)} ha`;
             document.getElementById('perimeterValue').textContent = `${perimeter.toFixed(0)} m`;
             
             const flatElevation = elevationData.elevation.flat();
             const minElev = Math.min(...flatElevation);
             const maxElev = Math.max(...flatElevation);
-            document.getElementById('elevationRange').textContent = `${minElev.toFixed(1)} - ${maxElev.toFixed(1)} m`;
+            document.getElementById('elevationRange').textContent = `${minElev.toFixed(0)}-${maxElev.toFixed(0)}m`;
             
             if (Object.keys(slopeStats).length > 0) {
                 const dominant = Object.entries(slopeStats).reduce((a, b) => 
                     a[1].percentage > b[1].percentage ? a : b
                 );
                 document.getElementById('dominantSlope').textContent = 
-                    `${dominant[0]} (${dominant[1].percentage.toFixed(1)}%)`;
+                    `${dominant[0]} (${dominant[1].percentage.toFixed(0)}%)`;
             }
         }
 
-        function createPlots(elevationData, slope, aspect, slopeStats) {
+        function createPlots(elevationData, slope, aspect, slopeStats, slopeVectors) {
             const { lonGrid, latGrid, elevation } = elevationData;
+            
+            // Clear previous plots
+            document.getElementById('elevationPlot').innerHTML = '';
+            document.getElementById('slopeVectorsPlot').innerHTML = '';
+            document.getElementById('steepnessPlot').innerHTML = '';
+            document.getElementById('slopePlot').innerHTML = '';
             
             // Elevation Map
             Plotly.newPlot('elevationPlot', [{
@@ -632,37 +734,30 @@
                 y: latGrid,
                 z: elevation,
                 colorscale: 'Viridis',
-                contours: {
-                    coloring: 'heatmap'
-                },
-                colorbar: {
-                    title: 'Elevation (m)'
-                }
+                contours: { coloring: 'heatmap' },
+                colorbar: { title: 'm' }
             }], {
-                title: 'Elevation Contour Map',
+                margin: { t: 30, r: 30, b: 40, l: 50 },
                 xaxis: { title: 'Longitude' },
                 yaxis: { title: 'Latitude' }
             });
             
-            // Slope Direction Rose Diagram
-            if (Object.keys(slopeStats).length > 0) {
-                const directions = Object.keys(slopeStats);
-                const percentages = directions.map(dir => slopeStats[dir].percentage);
-                
-                Plotly.newPlot('slopePlot', [{
-                    type: 'bar',
-                    x: directions,
-                    y: percentages,
-                    marker: {
-                        color: percentages,
-                        colorscale: 'Viridis'
-                    }
-                }], {
-                    title: 'Slope Direction Distribution',
-                    xaxis: { title: 'Direction' },
-                    yaxis: { title: 'Percentage (%)' }
-                });
-            }
+            // Slope Vectors
+            Plotly.newPlot('slopeVectorsPlot', [{
+                type: 'cone',
+                x: slopeVectors.x,
+                y: slopeVectors.y,
+                u: slopeVectors.u,
+                v: slopeVectors.v,
+                sizemode: 'absolute',
+                sizeref: 1,
+                colorscale: 'Viridis',
+                anchor: 'tail'
+            }], {
+                margin: { t: 30, r: 30, b: 40, l: 50 },
+                xaxis: { title: 'Longitude' },
+                yaxis: { title: 'Latitude' }
+            });
             
             // Slope Steepness
             Plotly.newPlot('steepnessPlot', [{
@@ -671,41 +766,33 @@
                 y: latGrid,
                 z: slope,
                 colorscale: 'Hot',
-                contours: {
-                    coloring: 'heatmap'
-                },
-                colorbar: {
-                    title: 'Slope (°)'
-                }
+                contours: { coloring: 'heatmap' },
+                colorbar: { title: '°' }
             }], {
-                title: 'Slope Steepness Map',
+                margin: { t: 30, r: 30, b: 40, l: 50 },
                 xaxis: { title: 'Longitude' },
                 yaxis: { title: 'Latitude' }
             });
             
-            // 3D Surface
-            Plotly.newPlot('3dPlot', [{
-                type: 'surface',
-                x: lonGrid,
-                y: latGrid,
-                z: elevation,
-                colorscale: 'Viridis',
-                lighting: {
-                    ambient: 0.95,
-                    diffuse: 0.99,
-                    specular: 0.01
-                }
-            }], {
-                title: '3D Terrain Surface',
-                scene: {
-                    xaxis: { title: 'Longitude' },
-                    yaxis: { title: 'Latitude' },
-                    zaxis: { title: 'Elevation (m)' }
-                }
-            });
+            // Slope Directions
+            if (Object.keys(slopeStats).length > 0) {
+                const directions = Object.keys(slopeStats);
+                const percentages = directions.map(dir => slopeStats[dir].percentage);
+                
+                Plotly.newPlot('slopePlot', [{
+                    type: 'bar',
+                    x: directions,
+                    y: percentages,
+                    marker: { color: percentages, colorscale: 'Viridis' }
+                }], {
+                    margin: { t: 30, r: 30, b: 40, l: 50 },
+                    xaxis: { title: 'Direction' },
+                    yaxis: { title: '% Area' }
+                });
+            }
         }
 
-        // Initialize with sample data
+        // Initialize
         window.onload = loadSampleData;
     </script>
 </body>
