@@ -843,7 +843,7 @@
             document.getElementById('progressFill').style.width = percent + '%';
         }
 
-        // Point-in-polygon function
+        // Enhanced point-in-polygon function
         function pointInPolygon(point, polygon) {
             const x = point[0], y = point[1];
             let inside = false;
@@ -858,31 +858,67 @@
             return inside;
         }
 
-        // Create polygon mask for the ENTIRE polygon
-        function createPolygonMask(lonGrid, latGrid, polygon) {
+        // Generate grid that properly covers the ENTIRE polygon
+        function generateAdaptiveGrid(polygon) {
+            const lons = polygon.map(coord => coord[0]);
+            const lats = polygon.map(coord => coord[1]);
+            
+            // Calculate bounding box with generous padding
+            const padding = 0.001; // ~100 meters
+            const minLon = Math.min(...lons) - padding;
+            const maxLon = Math.max(...lons) + padding;
+            const minLat = Math.min(...lats) - padding;
+            const maxLat = Math.max(...lats) + padding;
+            
+            // Use larger grid for better coverage
+            const gridSize = 40;
+            
+            const lonGrid = [];
+            const latGrid = [];
+            const gridPoints = [];
+            
+            // Generate dense grid
+            for (let i = 0; i < gridSize; i++) {
+                lonGrid[i] = minLon + (maxLon - minLon) * i / (gridSize - 1);
+                latGrid[i] = minLat + (maxLat - minLat) * i / (gridSize - 1);
+            }
+            
+            // Create mask and collect points within polygon
             const mask = [];
-            for (let i = 0; i < latGrid.length; i++) {
+            const pointsInPolygon = [];
+            
+            for (let i = 0; i < gridSize; i++) {
                 mask[i] = [];
-                for (let j = 0; j < lonGrid.length; j++) {
-                    mask[i][j] = pointInPolygon([lonGrid[j], latGrid[i]], polygon);
+                for (let j = 0; j < gridSize; j++) {
+                    const point = [lonGrid[j], latGrid[i]];
+                    const isInside = pointInPolygon(point, polygon);
+                    mask[i][j] = isInside;
+                    
+                    if (isInside) {
+                        pointsInPolygon.push({
+                            lon: lonGrid[j],
+                            lat: latGrid[i],
+                            i: i,
+                            j: j
+                        });
+                    }
                 }
             }
-            return mask;
+            
+            return {
+                lonGrid,
+                latGrid,
+                mask,
+                pointsInPolygon,
+                minLon,
+                maxLon,
+                minLat,
+                maxLat,
+                gridSize
+            };
         }
 
-        // Apply mask to data
-        function applyMask(data, mask) {
-            const maskedData = [];
-            for (let i = 0; i < data.length; i++) {
-                maskedData[i] = [];
-                for (let j = 0; j < data[i].length; j++) {
-                    maskedData[i][j] = mask[i][j] ? data[i][j] : NaN;
-                }
-            }
-            return maskedData;
-        }
-
-        // FAST Elevation API functions
+        // Elevation API functions
         async function getElevationFromOpenElevation(lat, lon) {
             try {
                 const response = await fetch('https://api.open-elevation.com/api/v1/lookup', {
@@ -927,6 +963,7 @@
             }
             
             if (elevation === null) {
+                // Create realistic elevation variation
                 const baseElev = 680;
                 const variation = (lat - 32.336) * 1000 + (lon - 36.228) * 500;
                 elevation = baseElev + variation + (Math.random() * 2 - 1);
@@ -935,40 +972,6 @@
             
             currentElevationSource = source;
             return elevation;
-        }
-
-        // Batch elevation fetching for speed
-        async function getElevationsBatch(coordinates) {
-            const locations = coordinates.map(coord => ({
-                latitude: coord[1],
-                longitude: coord[0]
-            }));
-            
-            try {
-                const response = await fetch('https://api.open-elevation.com/api/v1/lookup', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ locations: locations })
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.results && data.results.length === coordinates.length) {
-                        currentElevationSource = 'Open-Elevation API (Batch)';
-                        return data.results.map(result => result.elevation);
-                    }
-                }
-            } catch (error) {
-                console.log('Batch API failed, falling back to individual requests');
-            }
-            
-            const elevations = [];
-            for (let i = 0; i < coordinates.length; i++) {
-                const elev = await getElevationWithFallback(coordinates[i][1], coordinates[i][0]);
-                elevations.push(elev);
-                updateProgress(((i + 1) / coordinates.length) * 100);
-            }
-            return elevations;
         }
 
         async function analyzeTerrain() {
@@ -1011,54 +1014,65 @@
         }
 
         async function generateRealElevationData(coords) {
-            const lons = coords.map(coord => coord[0]);
-            const lats = coords.map(coord => coord[1]);
+            // Generate adaptive grid that properly covers the polygon
+            const gridData = generateAdaptiveGrid(coords);
+            const { lonGrid, latGrid, mask, pointsInPolygon, minLon, maxLon, minLat, maxLat, gridSize } = gridData;
             
-            // Calculate area to determine appropriate grid size
-            const area = calculatePolygonArea(coords).area;
-            let gridSize;
-            
-            // Adaptive grid sizing based on area
-            if (area < 10000) { // Very small area (< 1 hectare)
-                gridSize = 20;
-            } else if (area < 100000) { // Small area (< 10 hectares)
-                gridSize = 25;
-            } else { // Larger area
-                gridSize = 30;
-            }
-            
-            // Add buffer around polygon to ensure full coverage
-            const buffer = 0.001; // ~100 meters
-            const minLon = Math.min(...lons) - buffer;
-            const maxLon = Math.max(...lons) + buffer;
-            const minLat = Math.min(...lats) - buffer;
-            const maxLat = Math.max(...lats) + buffer;
-            
-            const lonGrid = [];
-            const latGrid = [];
             const elevation = [];
-            
-            // Generate grid points
-            const gridPoints = [];
             for (let i = 0; i < gridSize; i++) {
-                lonGrid[i] = minLon + (maxLon - minLon) * i / (gridSize - 1);
-                latGrid[i] = minLat + (maxLat - minLat) * i / (gridSize - 1);
-                for (let j = 0; j < gridSize; j++) {
-                    gridPoints.push([lonGrid[i], latGrid[j]]);
-                }
+                elevation[i] = new Array(gridSize).fill(NaN);
             }
             
-            // Fetch all elevations in batch
-            document.getElementById('loadingText').textContent = 'Fetching elevation data...';
-            const elevations = await getElevationsBatch(gridPoints);
+            // Fetch elevations only for points within the polygon
+            document.getElementById('loadingText').textContent = 'Fetching elevation data for polygon area...';
             
-            // Reconstruct elevation grid
-            let index = 0;
-            for (let i = 0; i < gridSize; i++) {
-                elevation[i] = [];
-                for (let j = 0; j < gridSize; j++) {
-                    elevation[i][j] = elevations[index++];
+            const pointsToFetch = pointsInPolygon.map(point => ({
+                lon: point.lon,
+                lat: point.lat,
+                i: point.i,
+                j: point.j
+            }));
+            
+            // Fetch elevations in smaller batches to avoid timeouts
+            const batchSize = 50;
+            for (let batchStart = 0; batchStart < pointsToFetch.length; batchStart += batchSize) {
+                const batchEnd = Math.min(batchStart + batchSize, pointsToFetch.length);
+                const batch = pointsToFetch.slice(batchStart, batchEnd);
+                
+                const locations = batch.map(point => ({
+                    latitude: point.lat,
+                    longitude: point.lon
+                }));
+                
+                try {
+                    const response = await fetch('https://api.open-elevation.com/api/v1/lookup', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ locations: locations })
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.results && data.results.length === locations.length) {
+                            currentElevationSource = 'Open-Elevation API';
+                            
+                            // Fill elevation grid with fetched data
+                            data.results.forEach((result, index) => {
+                                const point = batch[index];
+                                elevation[point.i][point.j] = result.elevation;
+                            });
+                        }
+                    }
+                } catch (error) {
+                    // Fallback to individual requests for this batch
+                    for (let idx = 0; idx < batch.length; idx++) {
+                        const point = batch[idx];
+                        const elev = await getElevationWithFallback(point.lat, point.lon);
+                        elevation[point.i][point.j] = elev;
+                    }
                 }
+                
+                updateProgress((batchEnd / pointsToFetch.length) * 100);
             }
             
             return { 
@@ -1069,7 +1083,9 @@
                 maxLon, 
                 minLat, 
                 maxLat,
-                polygon: coords // Store the original polygon
+                polygon: coords,
+                mask,
+                gridSize
             };
         }
 
@@ -1093,14 +1109,10 @@
         }
 
         function calculateSlopesAndVectors(elevationData) {
-            const { elevation, lonGrid, latGrid, polygon } = elevationData;
-            const gridSize = elevation.length;
+            const { elevation, lonGrid, latGrid, polygon, mask, gridSize } = elevationData;
             const slope = [];
             const aspect = [];
             const slopeVectors = { x: [], y: [], u: [], v: [] };
-            
-            // Create mask for the entire polygon
-            const mask = createPolygonMask(lonGrid, latGrid, polygon);
             
             const latCenter = (elevationData.minLat + elevationData.maxLat) / 2;
             const latToM = 111320;
@@ -1109,52 +1121,41 @@
             const dxMeters = (lonGrid[1] - lonGrid[0]) * lonToM;
             const dyMeters = (latGrid[1] - latGrid[0]) * latToM;
             
-            // Calculate gradients and slopes IN PERCENTAGE
+            // Initialize arrays
             for (let i = 0; i < gridSize; i++) {
-                slope[i] = [];
-                aspect[i] = [];
-                for (let j = 0; j < gridSize; j++) {
-                    if (!mask[i][j]) {
-                        slope[i][j] = NaN;
-                        aspect[i][j] = NaN;
-                        continue;
-                    }
-                    
-                    let dz_dx, dz_dy;
-                    
-                    if (i > 0 && i < gridSize - 1 && j > 0 && j < gridSize - 1) {
-                        dz_dx = (elevation[i+1][j] - elevation[i-1][j]) / (2 * dxMeters);
-                        dz_dy = (elevation[i][j+1] - elevation[i][j-1]) / (2 * dyMeters);
-                    } else {
-                        if (i === 0) dz_dx = (elevation[i+1][j] - elevation[i][j]) / dxMeters;
-                        else if (i === gridSize - 1) dz_dx = (elevation[i][j] - elevation[i-1][j]) / dxMeters;
-                        else dz_dx = (elevation[i+1][j] - elevation[i-1][j]) / (2 * dxMeters);
+                slope[i] = new Array(gridSize).fill(NaN);
+                aspect[i] = new Array(gridSize).fill(NaN);
+            }
+            
+            // Calculate gradients and slopes ONLY for points within the polygon
+            for (let i = 1; i < gridSize - 1; i++) {
+                for (let j = 1; j < gridSize - 1; j++) {
+                    // Only calculate if this point and its neighbors are within the polygon
+                    if (mask[i][j] && mask[i-1][j] && mask[i+1][j] && mask[i][j-1] && mask[i][j+1]) {
+                        const dz_dx = (elevation[i+1][j] - elevation[i-1][j]) / (2 * dxMeters);
+                        const dz_dy = (elevation[i][j+1] - elevation[i][j-1]) / (2 * dyMeters);
                         
-                        if (j === 0) dz_dy = (elevation[i][j+1] - elevation[i][j]) / dyMeters;
-                        else if (j === gridSize - 1) dz_dy = (elevation[i][j] - elevation[i][j-1]) / dyMeters;
-                        else dz_dy = (elevation[i][j+1] - elevation[i][j-1]) / (2 * dyMeters);
+                        // SLOPE IN PERCENTAGE
+                        slope[i][j] = Math.sqrt(dz_dx * dz_dx + dz_dy * dz_dy) * 100;
+                        aspect[i][j] = (Math.atan2(-dz_dx, dz_dy) * 180 / Math.PI + 360) % 360;
                     }
-                    
-                    // SLOPE IN PERCENTAGE
-                    slope[i][j] = Math.sqrt(dz_dx * dz_dx + dz_dy * dz_dy) * 100;
-                    aspect[i][j] = (Math.atan2(-dz_dx, dz_dy) * 180 / Math.PI + 360) % 360;
                 }
             }
             
             // Create slope vectors ONLY within the polygon
-            const skip = Math.max(2, Math.floor(gridSize / 10));
+            const skip = 2;
             for (let i = skip; i < gridSize - skip; i += skip) {
                 for (let j = skip; j < gridSize - skip; j += skip) {
-                    if (mask[i][j] && !isNaN(slope[i][j]) && !isNaN(aspect[i][j])) {
+                    if (mask[i][j] && !isNaN(slope[i][j]) && !isNaN(aspect[i][j]) && slope[i][j] > 0.1) {
                         const aspectRad = aspect[i][j] * Math.PI / 180;
-                        const magnitude = slope[i][j] / 20; // Scale for visualization
+                        const magnitude = Math.min(slope[i][j] / 10, 5);
                         
                         const downhillRad = aspectRad + Math.PI;
-                        const u = Math.sin(downhillRad) * magnitude * 0.001;
-                        const v = Math.cos(downhillRad) * magnitude * 0.001;
+                        const u = Math.sin(downhillRad) * magnitude * 0.0005;
+                        const v = Math.cos(downhillRad) * magnitude * 0.0005;
                         
-                        slopeVectors.x.push(lonGrid[i]);
-                        slopeVectors.y.push(latGrid[j]);
+                        slopeVectors.x.push(lonGrid[j]);
+                        slopeVectors.y.push(latGrid[i]);
                         slopeVectors.u.push(u);
                         slopeVectors.v.push(v);
                     }
@@ -1162,8 +1163,8 @@
             }
             
             return { 
-                slope: applyMask(slope, mask), 
-                aspect: applyMask(aspect, mask), 
+                slope, 
+                aspect, 
                 slopeVectors 
             };
         }
@@ -1177,14 +1178,12 @@
             
             const stats = {};
             let totalPoints = 0;
-            let validPoints = 0;
             
             // Count only valid (non-NaN) points within the polygon
             for (let i = 0; i < aspect.length; i++) {
                 for (let j = 0; j < aspect[i].length; j++) {
                     if (!isNaN(aspect[i][j]) && !isNaN(slope[i][j])) {
                         totalPoints++;
-                        validPoints++;
                         
                         const asp = aspect[i][j];
                         Object.keys(directionBins).forEach(dir => {
@@ -1212,7 +1211,7 @@
             // Convert to percentages
             Object.keys(stats).forEach(dir => {
                 stats[dir] = {
-                    percentage: (stats[dir].count / validPoints) * 100,
+                    percentage: (stats[dir].count / totalPoints) * 100,
                     meanSlope: stats[dir].slopeSum / stats[dir].count,
                     count: stats[dir].count
                 };
@@ -1244,10 +1243,19 @@
             let slopeCount = 0;
             for (let i = 0; i < elevationData.elevation.length; i++) {
                 for (let j = 0; j < elevationData.elevation[i].length; j++) {
-                    const slope = calculateSlopeAt(elevationData.elevation, i, j, elevationData);
-                    if (!isNaN(slope)) {
-                        slopeSum += slope;
-                        slopeCount++;
+                    const elev = elevationData.elevation[i][j];
+                    if (!isNaN(elev)) {
+                        // Simple slope calculation for mean
+                        if (i > 0 && i < elevationData.elevation.length - 1 && 
+                            j > 0 && j < elevationData.elevation[i].length - 1) {
+                            const dz_dx = (elevationData.elevation[i+1][j] - elevationData.elevation[i-1][j]);
+                            const dz_dy = (elevationData.elevation[i][j+1] - elevationData.elevation[i][j-1]);
+                            const slopeVal = Math.sqrt(dz_dx * dz_dx + dz_dy * dz_dy) * 100;
+                            if (!isNaN(slopeVal)) {
+                                slopeSum += slopeVal;
+                                slopeCount++;
+                            }
+                        }
                     }
                 }
             }
@@ -1273,23 +1281,6 @@
             }
         }
 
-        function calculateSlopeAt(elevation, i, j, elevationData) {
-            if (i <= 0 || i >= elevation.length - 1 || j <= 0 || j >= elevation[0].length - 1) {
-                return NaN;
-            }
-            
-            const latCenter = (elevationData.minLat + elevationData.maxLat) / 2;
-            const latToM = 111320;
-            const lonToM = 111320 * Math.cos(Math.PI * latCenter / 180);
-            const dxMeters = (elevationData.lonGrid[1] - elevationData.lonGrid[0]) * lonToM;
-            const dyMeters = (elevationData.latGrid[1] - elevationData.latGrid[0]) * latToM;
-            
-            const dz_dx = (elevation[i+1][j] - elevation[i-1][j]) / (2 * dxMeters);
-            const dz_dy = (elevation[i][j+1] - elevation[i][j-1]) / (2 * dyMeters);
-            
-            return Math.sqrt(dz_dx * dz_dx + dz_dy * dz_dy) * 100;
-        }
-
         function createPlots(elevationData, slope, aspect, slopeStats, slopeVectors) {
             const { lonGrid, latGrid, elevation, polygon } = elevationData;
             
@@ -1298,7 +1289,7 @@
                 document.getElementById(id).innerHTML = '';
             });
             
-            // Create polygon outline for plotting
+            // Create polygon outline
             const polyLons = polygon.map(coord => coord[0]);
             const polyLats = polygon.map(coord => coord[1]);
             
@@ -1310,9 +1301,14 @@
                     y: latGrid,
                     z: elevation,
                     colorscale: 'Viridis',
-                    contours: { coloring: 'heatmap' },
+                    contours: {
+                        coloring: 'heatmap',
+                        showlabels: true
+                    },
                     colorbar: { title: 'Elevation (m)' },
-                    name: 'Elevation'
+                    name: 'Elevation',
+                    hoverinfo: 'x+y+z',
+                    hovertemplate: 'Lon: %{x:.6f}<br>Lat: %{y:.6f}<br>Elev: %{z}m<extra></extra>'
                 },
                 {
                     type: 'cone',
@@ -1321,7 +1317,7 @@
                     u: slopeVectors.u,
                     v: slopeVectors.v,
                     sizemode: 'absolute',
-                    sizeref: 0.01,
+                    sizeref: 0.005,
                     colorscale: 'Rainbow',
                     anchor: 'tail',
                     name: 'Slope Direction'
@@ -1330,15 +1326,25 @@
                     type: 'scatter',
                     x: polyLons,
                     y: polyLats,
-                    mode: 'lines',
-                    line: { color: 'red', width: 3 },
-                    name: 'Polygon Boundary'
+                    mode: 'lines+markers',
+                    line: { color: 'red', width: 4 },
+                    marker: { size: 8, color: 'red' },
+                    name: 'Your Polygon',
+                    hoverinfo: 'text',
+                    text: polyLons.map((lon, i) => `Point ${i+1}: ${lon.toFixed(6)}, ${polyLats[i].toFixed(6)}`)
                 }
             ], {
-                margin: { t: 30, r: 30, b: 40, l: 50 },
-                xaxis: { title: 'Longitude' },
-                yaxis: { title: 'Latitude' },
-                title: 'Elevation with Slope Vectors (Downhill)'
+                margin: { t: 40, r: 40, b: 50, l: 60 },
+                xaxis: { 
+                    title: 'Longitude',
+                    scaleanchor: 'y'
+                },
+                yaxis: { 
+                    title: 'Latitude',
+                    scaleanchor: 'x'
+                },
+                title: 'Elevation Map with Slope Vectors<br><sub>Red outline shows your exact polygon area</sub>',
+                showlegend: true
             });
             
             // 2. 3D Surface Plot
@@ -1359,13 +1365,18 @@
                     z: 1000
                 }
             }], {
-                margin: { t: 30, r: 30, b: 40, l: 50 },
+                margin: { t: 40, r: 40, b: 50, l: 60 },
                 scene: {
                     xaxis: { title: 'Longitude' },
                     yaxis: { title: 'Latitude' },
-                    zaxis: { title: 'Elevation (m)' }
+                    zaxis: { title: 'Elevation (m)' },
+                    aspectratio: {
+                        x: 1, 
+                        y: 1, 
+                        z: 0.3
+                    }
                 },
-                title: '3D Terrain Surface'
+                title: '3D Terrain Surface<br><sub>Showing complete polygon area</sub>'
             });
             
             // 3. Gradient Map (IN PERCENTAGE)
@@ -1376,23 +1387,35 @@
                     y: latGrid,
                     z: slope,
                     colorscale: 'Hot',
-                    contours: { coloring: 'heatmap' },
+                    contours: {
+                        coloring: 'heatmap',
+                        showlabels: true
+                    },
                     colorbar: { title: 'Gradient (%)' },
-                    name: 'Gradient'
+                    name: 'Gradient',
+                    hoverinfo: 'x+y+z',
+                    hovertemplate: 'Lon: %{x:.6f}<br>Lat: %{y:.6f}<br>Slope: %{z:.1f}%<extra></extra>'
                 },
                 {
                     type: 'scatter',
                     x: polyLons,
                     y: polyLats,
                     mode: 'lines',
-                    line: { color: 'white', width: 2 },
-                    name: 'Polygon Boundary'
+                    line: { color: 'white', width: 3 },
+                    name: 'Polygon Boundary',
+                    hoverinfo: 'none'
                 }
             ], {
-                margin: { t: 30, r: 30, b: 40, l: 50 },
-                xaxis: { title: 'Longitude' },
-                yaxis: { title: 'Latitude' },
-                title: 'Terrain Gradient (%)'
+                margin: { t: 40, r: 40, b: 50, l: 60 },
+                xaxis: { 
+                    title: 'Longitude',
+                    scaleanchor: 'y'
+                },
+                yaxis: { 
+                    title: 'Latitude',
+                    scaleanchor: 'x'
+                },
+                title: 'Terrain Gradient (%)<br><sub>White outline shows polygon boundary</sub>'
             });
             
             // 4. Slope Direction Rose Diagram
@@ -1407,13 +1430,15 @@
                     marker: { 
                         color: percentages, 
                         colorscale: 'Viridis',
-                        colorbar: { title: '%' }
-                    }
+                        colorbar: { title: '% Area' }
+                    },
+                    hoverinfo: 'x+y',
+                    hovertemplate: 'Direction: %{x}<br>Area: %{y:.1f}%<extra></extra>'
                 }], {
-                    margin: { t: 30, r: 30, b: 40, l: 50 },
-                    xaxis: { title: 'Direction' },
+                    margin: { t: 40, r: 40, b: 50, l: 60 },
+                    xaxis: { title: 'Slope Direction' },
                     yaxis: { title: 'Percentage of Area (%)' },
-                    title: 'Slope Direction Distribution'
+                    title: 'Slope Direction Distribution<br><sub>Based on your polygon area</sub>'
                 });
             }
         }
