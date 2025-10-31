@@ -1,207 +1,0 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>حاسبة الابتسامات الأرضية - حصاد مائي مستدام</title>
-    <link rel="stylesheet" href="css/ar-style.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-</head>
-<body>
-    <header>
-        <nav>
-            <div class="logo">🌍 حاسبة الابتسامات الأرضية</div>
-            <ul>
-                <li><a href="index.html">English</a></li>
-                <li><a href="research.html">الورقة البحثية</a></li>
-                <li><a href="documentation.html">التوثيق</a></li>
-                <li><a href="#" onclick="showSection('calculator')">الحاسبة</a></li>
-                <li><a href="#" onclick="showSection('home')">الرئيسية</a></li>
-            </ul>
-        </nav>
-    </header>
-
-    <main>
-        <section id="home" class="section active">
-            <div class="hero">
-                <h1>حاسبة الابتسامات الأرضية</h1>
-                <p>تصميم أحواض نصف دائرية مثالية لحصاد المياه وحفظ التربة باستخدام منهجية WOCAT</p>
-                <button class="cta-button" onclick="showSection('calculator')">بدء الحساب</button>
-            </div>
-            <div class="features">
-                <div class="feature-card">
-                    <h3>مبنية على WOCAT</h3>
-                    <p>باستخدام منهجيات مثبتة من المراجعة العالمية لنهج وتقنيات الحفظ</p>
-                </div>
-                <div class="feature-card">
-                    <h3>تصميم علمي</h3>
-                    <p>حسابات دقيقة بناءً على هطول الأمطار، الانحدار، ومعاملات التربة</p>
-                </div>
-                <div class="feature-card">
-                    <h3>متعددة اللغات</h3>
-                    <p>متاحة باللغتين الإنجليزية والعربية لتسهيل الوصول</p>
-                </div>
-            </div>
-        </section>
-
-        <section id="calculator" class="section">
-            <div class="calculator-container">
-                <div class="progress-bar">
-                    <div class="step active" data-step="1">إدخال المنطقة</div>
-                    <div class="step" data-step="2">البيانات المناخية</div>
-                    <div class="step" data-step="3">النتائج</div>
-                    <div class="step" data-step="4">التصور البصري</div>
-                </div>
-
-                <!-- Step 1: Area Input -->
-                <div class="step-content active" id="step1-content">
-                    <h2>الخطوة 1: تحديد منطقتك</h2>
-                    <div class="input-methods">
-                        <div class="method-card" onclick="selectMethod('map')">
-                            <h3>🗺️ اختيار الخريطة</h3>
-                            <p>انقر على الخريطة لتحديد مضلع</p>
-                        </div>
-                        <div class="method-card" onclick="selectMethod('manual')">
-                            <h3>📝 إدخال يدوي</h3>
-                            <p>أدخل الإحداثيات يدوياً</p>
-                        </div>
-                        <div class="method-card" onclick="selectMethod('simple')">
-                            <h3>📐 إدخال مبسط</h3>
-                            <p>أدخل المساحة والانحدار مباشرة</p>
-                        </div>
-                    </div>
-
-                    <div id="map-container" class="method-content hidden">
-                        <h3>انقر على الخريطة لإنشاء مضلع</h3>
-                        <div id="map" style="height: 400px; width: 100%; margin: 20px 0;"></div>
-                        <div class="button-group">
-                            <button onclick="clearMap()">مسح</button>
-                            <button onclick="calculateAreaFromMap()">حساب المساحة والانحدار</button>
-                        </div>
-                    </div>
-
-                    <div id="manual-input" class="method-content hidden">
-                        <h3>أدخل الإحداثيات (خط الطول، خط العرض)</h3>
-                        <div id="coordinate-inputs">
-                            <div class="coord-pair">
-                                <input type="number" class="coord-lat" placeholder="خط العرض" step="any">
-                                <input type="number" class="coord-lng" placeholder="خط الطول" step="any">
-                                <button onclick="removeCoordinate(this)">إزالة</button>
-                            </div>
-                        </div>
-                        <div class="button-group">
-                            <button onclick="addCoordinate()">إضافة إحداثي</button>
-                            <button onclick="calculateAreaFromCoords()">حساب المساحة والانحدار</button>
-                        </div>
-                    </div>
-
-                    <div id="simple-input" class="method-content hidden">
-                        <h3>إدخال مباشر</h3>
-                        <div class="input-group">
-                            <label>المساحة الكلية (هكتار):</label>
-                            <input type="number" id="total-area" step="0.1" min="0.1" value="1.0">
-                        </div>
-                        <div class="input-group">
-                            <label>متوسط الانحدار (%):</label>
-                            <input type="number" id="avg-slope" step="0.1" min="0" max="60" value="5.0">
-                        </div>
-                        <button onclick="proceedToStep2()">التالي</button>
-                    </div>
-
-                    <div id="step1-results" class="method-content hidden">
-                        <h3>✅ اكتمل تحليل المنطقة</h3>
-                        <div class="results">
-                            <p>المساحة الكلية: <span id="calculated-area">0</span> هكتار</p>
-                            <p>متوسط الانحدار: <span id="calculated-slope">0</span>%</p>
-                            <p>تصنيف الانحدار: <span id="slope-class">منبسط</span></p>
-                        </div>
-                        <button onclick="proceedToStep2()">المتابعة إلى الخطوة 2</button>
-                    </div>
-                </div>
-
-                <!-- Step 2: Climate Data -->
-                <div class="step-content" id="step2-content">
-                    <h2>الخطوة 2: البيانات المناخية والتربة</h2>
-                    <form id="climate-form">
-                        <div class="form-group">
-                            <label for="rainfall">هطول الأمطار السنوي (مم):</label>
-                            <input type="number" id="rainfall" required min="100" max="3000" value="1025">
-                            <small>المصدر: بيانات WOCAT بينين تظهر متوسط 1025 مم. اضبط لمنطقتك.</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="soil-type">نوع التربة:</label>
-                            <select id="soil-type">
-                                <option value="sandy">تربة رملية (خشنة/خفيفة)</option>
-                                <option value="loamy" selected>تربة طينية (متوسطة)</option>
-                                <option value="clay">تربة طينية (ناعمة/ثقيلة)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="land-use">استخدام الأرض:</label>
-                            <select id="land-use">
-                                <option value="orchard">بستان فواكه (حمضيات، كاجو)</option>
-                                <option value="pasture">إعادة تأهيل المراعي</option>
-                                <option value="cropland">أراضي زراعية</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="organic-matter">محتوى المادة العضوية:</label>
-                            <select id="organic-matter">
-                                <option value="low">منخفض (&lt;1%)</option>
-                                <option value="medium" selected>متوسط (1-3%)</option>
-                                <option value="high">مرتفع (&gt;3%)</option>
-                            </select>
-                        </div>
-                        <div class="button-group">
-                            <button type="button" onclick="showSection('calculator', 1)">رجوع</button>
-                            <button type="button" onclick="calculateDesign()">حساب التصميم</button>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- Step 3: Results -->
-                <div class="step-content" id="step3-content">
-                    <h2>الخطوة 3: نتائج تصميم الابتسامات الأرضية</h2>
-                    <div id="results-container" class="results-grid"></div>
-                    <div class="button-group">
-                        <button onclick="showSection('calculator', 2)">رجوع</button>
-                        <button onclick="proceedToStep4()">عرض التصور البصري</button>
-                    </div>
-                </div>
-
-                <!-- Step 4: Visualization -->
-                <div class="step-content" id="step4-content">
-                    <h2>الخطوة 4: التصور البصري للتصميم</h2>
-                    <div id="visualization-container">
-                        <div class="viz-controls">
-                            <label>عرض: </label>
-                            <select id="view-type" onchange="updateVisualization()">
-                                <option value="single">هيكل فردي</option>
-                                <option value="layout">تخطيط الحقل</option>
-                                <option value="cross-section">مقطع عرضي</option>
-                            </select>
-                        </div>
-                        <canvas id="design-canvas" width="800" height="400"></canvas>
-                        <div id="layout-info" class="layout-details"></div>
-                    </div>
-                    <div class="button-group">
-                        <button onclick="showSection('calculator', 3)">رجوع</button>
-                        <button onclick="generateReport()">تقرير المشروع</button>
-                        <button onclick="resetCalculator()">حساب جديد</button>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <footer>
-        <p>© 2024 حاسبة الابتسامات الأرضية. مبنية على منهجيات WOCAT.</p>
-        <p>طورت بواسطة: عمر ياسين، مريم نجاجرة، هنادي يوسف | تحت إشراف: د. أمجد شطناوي</p>
-    </footer>
-
-    <script src="js/main.js"></script>
-    <script src="js/calculator.js"></script>
-    <script src="js/visualization.js"></script>
-</body>
-</html>
