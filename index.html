@@ -550,13 +550,13 @@
                     <button class="btn" onclick="loadSampleData()" style="width: 100%;">Load Sample Polygon</button>
                 </div>
 
-                <div class="source-info">
+                <div class="source-info" id="sourceInfo">
                     <strong>Elevation Data Sources:</strong><br>
                     • Open-Elevation API (Primary)<br>
                     • OpenTopoData API (Fallback)<br>
                     • Airbus DEM (Backup)<br>
-                    <strong>Slope Formula:</strong> Gradient = (Δelevation / Δdistance) × 100%<br>
-                    <strong>Calculation:</strong> √(dz/dx)² + (dz/dy)² × 100%
+                    <strong>Slope Formula:</strong> Slope = (Δelevation / Δdistance) × 100%<br>
+                    <strong>Calculation:</strong> Maximum slope to adjacent grid points
                 </div>
 
                 <div id="elevationSource" class="elevation-source">
@@ -1108,6 +1108,7 @@
             return { area, perimeter };
         }
 
+        // ENHANCED SLOPE CALCULATION FUNCTION
         function calculateSlopesAndVectors(elevationData) {
             const { elevation, lonGrid, latGrid, polygon, mask, gridSize } = elevationData;
             const slope = [];
@@ -1127,17 +1128,63 @@
                 aspect[i] = new Array(gridSize).fill(NaN);
             }
             
-            // Calculate gradients and slopes ONLY for points within the polygon
+            // Calculate slopes using CORRECT formula: Δelevation / Δdistance
             for (let i = 1; i < gridSize - 1; i++) {
                 for (let j = 1; j < gridSize - 1; j++) {
                     // Only calculate if this point and its neighbors are within the polygon
                     if (mask[i][j] && mask[i-1][j] && mask[i+1][j] && mask[i][j-1] && mask[i][j+1]) {
-                        const dz_dx = (elevation[i+1][j] - elevation[i-1][j]) / (2 * dxMeters);
-                        const dz_dy = (elevation[i][j+1] - elevation[i][j-1]) / (2 * dyMeters);
+                        // Calculate slopes in x and y directions
+                        const slope_x = (elevation[i+1][j] - elevation[i-1][j]) / (2 * dxMeters);
+                        const slope_y = (elevation[i][j+1] - elevation[i][j-1]) / (2 * dyMeters);
                         
-                        // SLOPE IN PERCENTAGE
-                        slope[i][j] = Math.sqrt(dz_dx * dz_dx + dz_dy * dz_dy) * 100;
-                        aspect[i][j] = (Math.atan2(-dz_dx, dz_dy) * 180 / Math.PI + 360) % 360;
+                        // CORRECT SLOPE: Maximum slope magnitude in percentage
+                        // This represents the steepest slope at this point
+                        const max_slope = Math.max(Math.abs(slope_x), Math.abs(slope_y));
+                        slope[i][j] = max_slope * 100; // Convert to percentage
+                        
+                        // Aspect calculation remains the same
+                        aspect[i][j] = (Math.atan2(-slope_x, slope_y) * 180 / Math.PI + 360) % 360;
+                    }
+                }
+            }
+            
+            // Alternative approach: Calculate slope between adjacent points for more accuracy
+            // This calculates the actual slope between this point and its neighbors
+            for (let i = 1; i < gridSize - 1; i++) {
+                for (let j = 1; j < gridSize - 1; j++) {
+                    if (mask[i][j] && !isNaN(slope[i][j])) {
+                        // Calculate slopes to all 8 neighbors and take the maximum
+                        let maxNeighborSlope = 0;
+                        
+                        // Check all 8 directions
+                        const directions = [
+                            [-1, -1], [-1, 0], [-1, 1],
+                            [0, -1],         [0, 1],
+                            [1, -1],  [1, 0],  [1, 1]
+                        ];
+                        
+                        for (const [di, dj] of directions) {
+                            const ni = i + di;
+                            const nj = j + dj;
+                            
+                            if (mask[ni] && mask[ni][nj] && !isNaN(elevation[ni][nj])) {
+                                // Calculate distance to neighbor in meters
+                                const dist_lon = Math.abs(lonGrid[nj] - lonGrid[j]) * lonToM;
+                                const dist_lat = Math.abs(latGrid[ni] - latGrid[i]) * latToM;
+                                const distance = Math.sqrt(dist_lon * dist_lon + dist_lat * dist_lat);
+                                
+                                // CORRECT SLOPE: Δelevation / Δdistance
+                                const elevation_diff = elevation[ni][nj] - elevation[i][j];
+                                const neighbor_slope = Math.abs(elevation_diff) / distance;
+                                
+                                maxNeighborSlope = Math.max(maxNeighborSlope, neighbor_slope);
+                            }
+                        }
+                        
+                        // Use the maximum slope found (convert to percentage)
+                        if (maxNeighborSlope > 0) {
+                            slope[i][j] = maxNeighborSlope * 100;
+                        }
                     }
                 }
             }
@@ -1148,11 +1195,11 @@
                 for (let j = skip; j < gridSize - skip; j += skip) {
                     if (mask[i][j] && !isNaN(slope[i][j]) && !isNaN(aspect[i][j]) && slope[i][j] > 0.1) {
                         const aspectRad = aspect[i][j] * Math.PI / 180;
-                        const magnitude = Math.min(slope[i][j] / 10, 5);
+                        const magnitude = Math.min(slope[i][j] / 5, 3); // Scale for visualization
                         
                         const downhillRad = aspectRad + Math.PI;
-                        const u = Math.sin(downhillRad) * magnitude * 0.0005;
-                        const v = Math.cos(downhillRad) * magnitude * 0.0005;
+                        const u = Math.sin(downhillRad) * magnitude * 0.001;
+                        const v = Math.cos(downhillRad) * magnitude * 0.001;
                         
                         slopeVectors.x.push(lonGrid[j]);
                         slopeVectors.y.push(latGrid[i]);
@@ -1220,6 +1267,7 @@
             return stats;
         }
 
+        // ENHANCED STATISTICS FUNCTION
         function updateStatistics(area, perimeter, elevationData, slopeStats) {
             document.getElementById('areaValue').textContent = `${(area/10000).toFixed(1)} ha`;
             document.getElementById('perimeterValue').textContent = `${perimeter.toFixed(0)} m`;
@@ -1238,28 +1286,43 @@
             }
             document.getElementById('elevationRange').textContent = `${minElev.toFixed(0)}-${maxElev.toFixed(0)}m`;
             
-            // Calculate mean gradient only within the polygon
+            // Calculate mean gradient using CORRECT slope formula
             let slopeSum = 0;
             let slopeCount = 0;
-            for (let i = 0; i < elevationData.elevation.length; i++) {
-                for (let j = 0; j < elevationData.elevation[i].length; j++) {
-                    const elev = elevationData.elevation[i][j];
-                    if (!isNaN(elev)) {
-                        // Simple slope calculation for mean
-                        if (i > 0 && i < elevationData.elevation.length - 1 && 
-                            j > 0 && j < elevationData.elevation[i].length - 1) {
-                            const dz_dx = (elevationData.elevation[i+1][j] - elevationData.elevation[i-1][j]);
-                            const dz_dy = (elevationData.elevation[i][j+1] - elevationData.elevation[i][j-1]);
-                            const slopeVal = Math.sqrt(dz_dx * dz_dx + dz_dy * dz_dy) * 100;
-                            if (!isNaN(slopeVal)) {
-                                slopeSum += slopeVal;
-                                slopeCount++;
-                            }
+            
+            const latCenter = (elevationData.minLat + elevationData.maxLat) / 2;
+            const latToM = 111320;
+            const lonToM = 111320 * Math.cos(Math.PI * latCenter / 180);
+            
+            for (let i = 1; i < elevationData.elevation.length - 1; i++) {
+                for (let j = 1; j < elevationData.elevation[i].length - 1; j++) {
+                    if (!isNaN(elevationData.elevation[i][j])) {
+                        // CORRECT SLOPE CALCULATION: Δelevation / Δdistance
+                        // Calculate to immediate neighbors
+                        const elev = elevationData.elevation[i][j];
+                        
+                        // Check right neighbor
+                        if (!isNaN(elevationData.elevation[i][j+1])) {
+                            const dist_lon = Math.abs(elevationData.lonGrid[j+1] - elevationData.lonGrid[j]) * lonToM;
+                            const elevation_diff = Math.abs(elevationData.elevation[i][j+1] - elev);
+                            const slopeVal = elevation_diff / dist_lon;
+                            slopeSum += slopeVal;
+                            slopeCount++;
+                        }
+                        
+                        // Check bottom neighbor
+                        if (!isNaN(elevationData.elevation[i+1][j])) {
+                            const dist_lat = Math.abs(elevationData.latGrid[i+1] - elevationData.latGrid[i]) * latToM;
+                            const elevation_diff = Math.abs(elevationData.elevation[i+1][j] - elev);
+                            const slopeVal = elevation_diff / dist_lat;
+                            slopeSum += slopeVal;
+                            slopeCount++;
                         }
                     }
                 }
             }
-            const meanSlope = slopeCount > 0 ? slopeSum / slopeCount : 0;
+            
+            const meanSlope = slopeCount > 0 ? (slopeSum / slopeCount) * 100 : 0;
             document.getElementById('meanSlope').textContent = `${meanSlope.toFixed(1)}%`;
             
             // Update slope directions
@@ -1444,7 +1507,9 @@
         }
 
         // Initialize
-        window.onload = loadSampleData;
+        window.onload = function() {
+            loadSampleData();
+        };
     </script>
 </body>
 </html>
