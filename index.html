@@ -215,6 +215,32 @@
             color: #2c3e50;
         }
 
+        .slope-directions {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+            margin-top: 10px;
+        }
+
+        .slope-directions h4 {
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+
+        .direction-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px solid #f1f1f1;
+            font-size: 0.8em;
+        }
+
+        .direction-item:last-child {
+            border-bottom: none;
+        }
+
         .plots-container {
             flex: 1;
             display: grid;
@@ -299,6 +325,16 @@
             font-size: 0.85em;
         }
 
+        .source-info {
+            background: #e8f4fd;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 0.75em;
+            color: #2c3e50;
+            border-left: 3px solid #3498db;
+        }
+
         /* Mobile-specific adjustments */
         @media (max-width: 767px) {
             body {
@@ -324,7 +360,7 @@
             }
             
             .coordinate-input input {
-                font-size: 16px; /* Better for mobile touch */
+                font-size: 16px;
             }
             
             .plots-container {
@@ -336,7 +372,6 @@
             }
         }
 
-        /* Very small screens */
         @media (max-width: 480px) {
             .stats-grid {
                 grid-template-columns: 1fr;
@@ -364,9 +399,7 @@
                         <input type="number" id="latitude" placeholder="Latitude" step="any" value="32.339083">
                         <button class="btn" onclick="addCoordinate()">Add Point</button>
                     </div>
-                    <div class="coordinates-list" id="coordinatesList">
-                        <!-- Coordinates will be added here -->
-                    </div>
+                    <div class="coordinates-list" id="coordinatesList"></div>
                 </div>
 
                 <div class="buttons">
@@ -379,6 +412,12 @@
                     <button class="btn" onclick="loadSampleData()" style="width: 100%;">Load Sample Polygon</button>
                 </div>
 
+                <div class="source-info">
+                    <strong>Data Source:</strong> Synthetic elevation data generated based on terrain patterns<br>
+                    <strong>Slope Formula:</strong> Slope = arctan(√(dz/dx)² + (dz/dy)²)<br>
+                    <strong>Gradient:</strong> dz/dx = Δelevation / Δdistance
+                </div>
+
                 <div id="errorMessage" class="error"></div>
                 <div id="successMessage" class="success"></div>
             </div>
@@ -386,7 +425,7 @@
             <div class="results-section">
                 <div class="stats-panel">
                     <h3>Analysis Results</h3>
-                    <div class="stats-grid" id="statsGrid">
+                    <div class="stats-grid">
                         <div class="stat-card">
                             <h4>Area</h4>
                             <p id="areaValue">-</p>
@@ -400,8 +439,18 @@
                             <p id="elevationRange">-</p>
                         </div>
                         <div class="stat-card">
-                            <h4>Dominant Slope</h4>
-                            <p id="dominantSlope">-</p>
+                            <h4>Mean Slope</h4>
+                            <p id="meanSlope">-</p>
+                        </div>
+                    </div>
+                    
+                    <div class="slope-directions">
+                        <h4>Slope Direction Distribution</h4>
+                        <div id="slopeDirectionsList">
+                            <div class="direction-item">
+                                <span>No data</span>
+                                <span>-</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -413,19 +462,19 @@
 
                 <div class="plots-container">
                     <div class="plot">
-                        <div class="plot-title">Elevation Map</div>
+                        <div class="plot-title">Elevation Map & Slope Vectors</div>
                         <div class="plot-content" id="elevationPlot"></div>
                     </div>
                     <div class="plot">
-                        <div class="plot-title">Slope Vectors</div>
-                        <div class="plot-content" id="slopeVectorsPlot"></div>
+                        <div class="plot-title">3D Terrain Surface</div>
+                        <div class="plot-content" id="threeDPlot"></div>
                     </div>
                     <div class="plot">
-                        <div class="plot-title">Slope Steepness</div>
+                        <div class="plot-title">Slope Steepness Map</div>
                         <div class="plot-content" id="steepnessPlot"></div>
                     </div>
                     <div class="plot">
-                        <div class="plot-title">Slope Directions</div>
+                        <div class="plot-title">Slope Direction Rose</div>
                         <div class="plot-content" id="slopePlot"></div>
                     </div>
                 </div>
@@ -576,21 +625,22 @@
             const minLat = Math.min(...lats);
             const maxLat = Math.max(...lats);
             
-            const gridSize = 20; // Smaller for better performance
+            const gridSize = 25;
             const lonGrid = [];
             const latGrid = [];
             const elevation = [];
             
+            // Create realistic terrain with NW to SE slope
             for (let i = 0; i < gridSize; i++) {
                 lonGrid[i] = minLon + (maxLon - minLon) * i / (gridSize - 1);
                 latGrid[i] = minLat + (maxLat - minLat) * i / (gridSize - 1);
                 elevation[i] = [];
                 
                 for (let j = 0; j < gridSize; j++) {
+                    // Create NW to SE slope pattern
                     const baseElev = 680;
-                    const distX = (lonGrid[i] - minLon) / (maxLon - minLon);
-                    const distY = (latGrid[j] - minLat) / (maxLat - minLat);
-                    elevation[i][j] = baseElev + 8 * (0.8 - 0.6 * distX + 0.4 * distY) + Math.random() * 0.3;
+                    const distFromNW = (i/gridSize) * 0.7 + (j/gridSize) * 0.3;
+                    elevation[i][j] = baseElev + 10 * (1 - distFromNW) + Math.random() * 0.5;
                 }
             }
             
@@ -602,7 +652,7 @@
             const gridSize = elevation.length;
             const slope = [];
             const aspect = [];
-            const slopeVectors = { u: [], v: [], x: [], y: [] };
+            const slopeVectors = { x: [], y: [], u: [], v: [] };
             
             const latCenter = (elevationData.minLat + elevationData.maxLat) / 2;
             const latToM = 111320;
@@ -611,41 +661,47 @@
             const dxMeters = (lonGrid[1] - lonGrid[0]) * lonToM;
             const dyMeters = (latGrid[1] - latGrid[0]) * latToM;
             
+            // Calculate gradients and slopes
             for (let i = 0; i < gridSize; i++) {
                 slope[i] = [];
                 aspect[i] = [];
                 for (let j = 0; j < gridSize; j++) {
                     let dz_dx, dz_dy;
                     
-                    if (i === 0) {
-                        dz_dx = (elevation[i+1][j] - elevation[i][j]) / dxMeters;
-                    } else if (i === gridSize - 1) {
-                        dz_dx = (elevation[i][j] - elevation[i-1][j]) / dxMeters;
-                    } else {
+                    // Central difference for interior points
+                    if (i > 0 && i < gridSize - 1 && j > 0 && j < gridSize - 1) {
                         dz_dx = (elevation[i+1][j] - elevation[i-1][j]) / (2 * dxMeters);
-                    }
-                    
-                    if (j === 0) {
-                        dz_dy = (elevation[i][j+1] - elevation[i][j]) / dyMeters;
-                    } else if (j === gridSize - 1) {
-                        dz_dy = (elevation[i][j] - elevation[i][j-1]) / dyMeters;
-                    } else {
                         dz_dy = (elevation[i][j+1] - elevation[i][j-1]) / (2 * dyMeters);
+                    } else {
+                        // Forward/backward difference for edges
+                        if (i === 0) dz_dx = (elevation[i+1][j] - elevation[i][j]) / dxMeters;
+                        else if (i === gridSize - 1) dz_dx = (elevation[i][j] - elevation[i-1][j]) / dxMeters;
+                        else dz_dx = (elevation[i+1][j] - elevation[i-1][j]) / (2 * dxMeters);
+                        
+                        if (j === 0) dz_dy = (elevation[i][j+1] - elevation[i][j]) / dyMeters;
+                        else if (j === gridSize - 1) dz_dy = (elevation[i][j] - elevation[i][j-1]) / dyMeters;
+                        else dz_dy = (elevation[i][j+1] - elevation[i][j-1]) / (2 * dyMeters);
                     }
                     
+                    // Slope = arctan(√(dz/dx)² + (dz/dy)²)
                     slope[i][j] = Math.atan(Math.sqrt(dz_dx * dz_dx + dz_dy * dz_dy)) * 180 / Math.PI;
+                    
+                    // Aspect (direction of steepest ascent)
                     aspect[i][j] = (Math.atan2(-dz_dx, dz_dy) * 180 / Math.PI + 360) % 360;
                 }
             }
             
-            const skip = 2;
+            // Create slope vectors (pointing DOWNHILL)
+            const skip = 3;
             for (let i = skip; i < gridSize - skip; i += skip) {
                 for (let j = skip; j < gridSize - skip; j += skip) {
                     const aspectRad = aspect[i][j] * Math.PI / 180;
                     const magnitude = slope[i][j];
+                    
+                    // Vector pointing DOWNHILL (opposite of aspect)
                     const downhillRad = aspectRad + Math.PI;
-                    const u = Math.sin(downhillRad) * magnitude * 0.5;
-                    const v = Math.cos(downhillRad) * magnitude * 0.5;
+                    const u = Math.sin(downhillRad) * magnitude * 0.0002;
+                    const v = Math.cos(downhillRad) * magnitude * 0.0002;
                     
                     slopeVectors.x.push(lonGrid[i]);
                     slopeVectors.y.push(latGrid[j]);
@@ -709,57 +765,118 @@
             const maxElev = Math.max(...flatElevation);
             document.getElementById('elevationRange').textContent = `${minElev.toFixed(0)}-${maxElev.toFixed(0)}m`;
             
+            // Calculate mean slope
+            const flatSlope = elevationData.elevation.flat().map((_, i) => {
+                const row = Math.floor(i / elevationData.elevation[0].length);
+                const col = i % elevationData.elevation[0].length;
+                return calculateSlopeAt(elevationData.elevation, row, col, elevationData);
+            });
+            const meanSlope = flatSlope.reduce((a, b) => a + b, 0) / flatSlope.length;
+            document.getElementById('meanSlope').textContent = `${meanSlope.toFixed(1)}°`;
+            
+            // Update slope directions
+            const directionsList = document.getElementById('slopeDirectionsList');
+            directionsList.innerHTML = '';
+            
             if (Object.keys(slopeStats).length > 0) {
-                const dominant = Object.entries(slopeStats).reduce((a, b) => 
-                    a[1].percentage > b[1].percentage ? a : b
-                );
-                document.getElementById('dominantSlope').textContent = 
-                    `${dominant[0]} (${dominant[1].percentage.toFixed(0)}%)`;
+                Object.entries(slopeStats)
+                    .sort((a, b) => b[1].percentage - a[1].percentage)
+                    .forEach(([dir, stats]) => {
+                        const item = document.createElement('div');
+                        item.className = 'direction-item';
+                        item.innerHTML = `
+                            <span>${dir}</span>
+                            <span>${stats.percentage.toFixed(1)}% (${stats.meanSlope.toFixed(1)}°)</span>
+                        `;
+                        directionsList.appendChild(item);
+                    });
             }
+        }
+
+        function calculateSlopeAt(elevation, i, j, elevationData) {
+            if (i <= 0 || i >= elevation.length - 1 || j <= 0 || j >= elevation[0].length - 1) {
+                return 0;
+            }
+            
+            const latCenter = (elevationData.minLat + elevationData.maxLat) / 2;
+            const latToM = 111320;
+            const lonToM = 111320 * Math.cos(Math.PI * latCenter / 180);
+            const dxMeters = (elevationData.lonGrid[1] - elevationData.lonGrid[0]) * lonToM;
+            const dyMeters = (elevationData.latGrid[1] - elevationData.latGrid[0]) * latToM;
+            
+            const dz_dx = (elevation[i+1][j] - elevation[i-1][j]) / (2 * dxMeters);
+            const dz_dy = (elevation[i][j+1] - elevation[i][j-1]) / (2 * dyMeters);
+            
+            return Math.atan(Math.sqrt(dz_dx * dz_dx + dz_dy * dz_dy)) * 180 / Math.PI;
         }
 
         function createPlots(elevationData, slope, aspect, slopeStats, slopeVectors) {
             const { lonGrid, latGrid, elevation } = elevationData;
             
             // Clear previous plots
-            document.getElementById('elevationPlot').innerHTML = '';
-            document.getElementById('slopeVectorsPlot').innerHTML = '';
-            document.getElementById('steepnessPlot').innerHTML = '';
-            document.getElementById('slopePlot').innerHTML = '';
+            ['elevationPlot', 'threeDPlot', 'steepnessPlot', 'slopePlot'].forEach(id => {
+                document.getElementById(id).innerHTML = '';
+            });
             
-            // Elevation Map
-            Plotly.newPlot('elevationPlot', [{
-                type: 'contour',
+            // 1. Elevation Map with Slope Vectors
+            Plotly.newPlot('elevationPlot', [
+                {
+                    type: 'contour',
+                    x: lonGrid,
+                    y: latGrid,
+                    z: elevation,
+                    colorscale: 'Viridis',
+                    contours: { coloring: 'heatmap' },
+                    colorbar: { title: 'Elevation (m)' },
+                    name: 'Elevation'
+                },
+                {
+                    type: 'cone',
+                    x: slopeVectors.x,
+                    y: slopeVectors.y,
+                    u: slopeVectors.u,
+                    v: slopeVectors.v,
+                    sizemode: 'absolute',
+                    sizeref: 0.0005,
+                    colorscale: 'Rainbow',
+                    anchor: 'tail',
+                    name: 'Slope Direction'
+                }
+            ], {
+                margin: { t: 30, r: 30, b: 40, l: 50 },
+                xaxis: { title: 'Longitude' },
+                yaxis: { title: 'Latitude' },
+                title: 'Elevation with Slope Vectors (Downhill)'
+            });
+            
+            // 2. 3D Surface Plot
+            Plotly.newPlot('threeDPlot', [{
+                type: 'surface',
                 x: lonGrid,
                 y: latGrid,
                 z: elevation,
                 colorscale: 'Viridis',
-                contours: { coloring: 'heatmap' },
-                colorbar: { title: 'm' }
+                lighting: {
+                    ambient: 0.4,
+                    diffuse: 0.8,
+                    specular: 0.1
+                },
+                lightposition: {
+                    x: 100,
+                    y: 100,
+                    z: 1000
+                }
             }], {
                 margin: { t: 30, r: 30, b: 40, l: 50 },
-                xaxis: { title: 'Longitude' },
-                yaxis: { title: 'Latitude' }
+                scene: {
+                    xaxis: { title: 'Longitude' },
+                    yaxis: { title: 'Latitude' },
+                    zaxis: { title: 'Elevation (m)' }
+                },
+                title: '3D Terrain Surface'
             });
             
-            // Slope Vectors
-            Plotly.newPlot('slopeVectorsPlot', [{
-                type: 'cone',
-                x: slopeVectors.x,
-                y: slopeVectors.y,
-                u: slopeVectors.u,
-                v: slopeVectors.v,
-                sizemode: 'absolute',
-                sizeref: 1,
-                colorscale: 'Viridis',
-                anchor: 'tail'
-            }], {
-                margin: { t: 30, r: 30, b: 40, l: 50 },
-                xaxis: { title: 'Longitude' },
-                yaxis: { title: 'Latitude' }
-            });
-            
-            // Slope Steepness
+            // 3. Slope Steepness
             Plotly.newPlot('steepnessPlot', [{
                 type: 'contour',
                 x: lonGrid,
@@ -767,14 +884,15 @@
                 z: slope,
                 colorscale: 'Hot',
                 contours: { coloring: 'heatmap' },
-                colorbar: { title: '°' }
+                colorbar: { title: 'Slope (°)' }
             }], {
                 margin: { t: 30, r: 30, b: 40, l: 50 },
                 xaxis: { title: 'Longitude' },
-                yaxis: { title: 'Latitude' }
+                yaxis: { title: 'Latitude' },
+                title: 'Slope Steepness'
             });
             
-            // Slope Directions
+            // 4. Slope Direction Rose Diagram
             if (Object.keys(slopeStats).length > 0) {
                 const directions = Object.keys(slopeStats);
                 const percentages = directions.map(dir => slopeStats[dir].percentage);
@@ -783,11 +901,16 @@
                     type: 'bar',
                     x: directions,
                     y: percentages,
-                    marker: { color: percentages, colorscale: 'Viridis' }
+                    marker: { 
+                        color: percentages, 
+                        colorscale: 'Viridis',
+                        colorbar: { title: '%' }
+                    }
                 }], {
                     margin: { t: 30, r: 30, b: 40, l: 50 },
                     xaxis: { title: 'Direction' },
-                    yaxis: { title: '% Area' }
+                    yaxis: { title: 'Percentage of Area (%)' },
+                    title: 'Slope Direction Distribution'
                 });
             }
         }
@@ -796,4 +919,4 @@
         window.onload = loadSampleData;
     </script>
 </body>
-</html>
+    </html>
