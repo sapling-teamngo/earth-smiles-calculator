@@ -3,205 +3,710 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Earth Smiles Calculator - Sustainable Water Harvesting</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <title>Terrain Slope Analysis Tool</title>
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/numeric/1.2.6/numeric.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .input-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .coordinate-input {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .coordinate-input input {
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .coordinate-input input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .coordinates-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 10px;
+            background: white;
+            margin-top: 10px;
+        }
+
+        .coordinate-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .coordinate-item:last-child {
+            border-bottom: none;
+        }
+
+        .results-section {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            gap: 20px;
+        }
+
+        .stats-panel {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .stat-card h4 {
+            color: #7f8c8d;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .plots-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: 600px;
+        }
+
+        .plot {
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .plot-title {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #3498db;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #e74c3c;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .success {
+            background: #27ae60;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <nav>
-            <div class="logo">🌍 Earth Smiles Calculator</div>
-            <ul>
-                <li><a href="#" onclick="showSection('home')">Home</a></li>
-                <li><a href="#" onclick="showSection('calculator')">Calculator</a></li>
-                <li><a href="documentation.html">Documentation</a></li>
-                <li><a href="research.html">Research</a></li>
-                <li><a href="ar.html">العربية</a></li>
-            </ul>
-        </nav>
-    </header>
+    <div class="container">
+        <div class="header">
+            <h1>🌄 Terrain Slope Analysis Tool</h1>
+            <p>Input polygon coordinates to analyze elevation, slope directions, and terrain characteristics</p>
+        </div>
 
-    <main>
-        <section id="home" class="section active">
-            <div class="hero">
-                <h1>Earth Smiles Calculator</h1>
-                <p>Design optimal semicircular bunds for water harvesting and soil conservation using WOCAT methodology</p>
-                <button class="cta-button" onclick="showSection('calculator')">Start Calculation</button>
+        <div class="content">
+            <div class="input-section">
+                <div class="input-group">
+                    <label>Enter Polygon Coordinates (Longitude, Latitude):</label>
+                    <div class="coordinate-input">
+                        <input type="number" id="longitude" placeholder="Longitude" step="any" value="36.228512">
+                        <input type="number" id="latitude" placeholder="Latitude" step="any" value="32.339083">
+                        <button class="btn" onclick="addCoordinate()">Add Point</button>
+                    </div>
+                    <div class="coordinates-list" id="coordinatesList">
+                        <!-- Coordinates will be added here -->
+                    </div>
+                </div>
+
+                <div class="buttons">
+                    <button class="btn btn-danger" onclick="clearCoordinates()">Clear All</button>
+                    <button class="btn btn-success" onclick="analyzeTerrain()">Analyze Terrain</button>
+                </div>
+
+                <div class="input-group">
+                    <label>Or use sample data:</label>
+                    <button class="btn" onclick="loadSampleData()" style="width: 100%;">Load Sample Polygon</button>
+                </div>
+
+                <div id="errorMessage" class="error"></div>
+                <div id="successMessage" class="success"></div>
             </div>
-            <div class="features">
-                <div class="feature-card">
-                    <h3>WOCAT Based</h3>
-                    <p>Using proven methodologies from World Overview of Conservation Approaches and Technologies</p>
-                </div>
-                <div class="feature-card">
-                    <h3>Scientific Design</h3>
-                    <p>Accurate calculations based on rainfall, slope, and soil parameters</p>
-                </div>
-                <div class="feature-card">
-                    <h3>Multi-Language</h3>
-                    <p>Available in English and Arabic for wider accessibility</p>
-                </div>
-            </div>
-        </section>
 
-        <section id="calculator" class="section">
-            <div class="calculator-container">
-                <div class="progress-bar">
-                    <div class="step active" data-step="1">Area Input</div>
-                    <div class="step" data-step="2">Climate Data</div>
-                    <div class="step" data-step="3">Results</div>
-                    <div class="step" data-step="4">Visualization</div>
-                </div>
-
-                <!-- Step 1: Area Input -->
-                <div class="step-content active" id="step1-content">
-                    <h2>Step 1: Define Your Area</h2>
-                    <div class="input-methods">
-                        <div class="method-card" onclick="selectMethod('map')">
-                            <h3>🗺️ Map Selection</h3>
-                            <p>Click points on map to define polygon</p>
+            <div class="results-section">
+                <div class="stats-panel">
+                    <h3>Terrain Analysis Results</h3>
+                    <div class="stats-grid" id="statsGrid">
+                        <div class="stat-card">
+                            <h4>Area</h4>
+                            <p id="areaValue">-</p>
                         </div>
-                        <div class="method-card" onclick="selectMethod('manual')">
-                            <h3>📝 Manual Input</h3>
-                            <p>Enter coordinates manually</p>
+                        <div class="stat-card">
+                            <h4>Perimeter</h4>
+                            <p id="perimeterValue">-</p>
                         </div>
-                        <div class="method-card" onclick="selectMethod('simple')">
-                            <h3>📐 Simple Input</h3>
-                            <p>Enter area and slope directly</p>
+                        <div class="stat-card">
+                            <h4>Elevation Range</h4>
+                            <p id="elevationRange">-</p>
                         </div>
-                    </div>
-
-                    <div id="map-container" class="method-content hidden">
-                        <h3>Click on map to create polygon</h3>
-                        <div id="map" style="height: 400px; width: 100%; margin: 20px 0;"></div>
-                        <div class="button-group">
-                            <button onclick="clearMap()">Clear</button>
-                            <button onclick="calculateAreaFromMap()">Calculate Area & Slope</button>
+                        <div class="stat-card">
+                            <h4>Dominant Slope</h4>
+                            <p id="dominantSlope">-</p>
                         </div>
-                    </div>
-
-                    <div id="manual-input" class="method-content hidden">
-                        <h3>Enter Coordinates (Latitude, Longitude)</h3>
-                        <div id="coordinate-inputs">
-                            <div class="coord-pair">
-                                <input type="number" class="coord-lat" placeholder="Latitude" step="any">
-                                <input type="number" class="coord-lng" placeholder="Longitude" step="any">
-                                <button onclick="removeCoordinate(this)">Remove</button>
-                            </div>
-                        </div>
-                        <div class="button-group">
-                            <button onclick="addCoordinate()">Add Coordinate</button>
-                            <button onclick="calculateAreaFromCoords()">Calculate Area & Slope</button>
-                        </div>
-                    </div>
-
-                    <div id="simple-input" class="method-content hidden">
-                        <h3>Direct Input</h3>
-                        <div class="input-group">
-                            <label>Total Area (hectares):</label>
-                            <input type="number" id="total-area" step="0.1" min="0.1" value="1.0">
-                        </div>
-                        <div class="input-group">
-                            <label>Average Slope (%):</label>
-                            <input type="number" id="avg-slope" step="0.1" min="0" max="60" value="5.0">
-                        </div>
-                        <button onclick="proceedToStep2()">Next</button>
-                    </div>
-
-                    <div id="step1-results" class="method-content hidden">
-                        <h3>✅ Area Analysis Complete</h3>
-                        <div class="results">
-                            <p>Total Area: <span id="calculated-area">0</span> hectares</p>
-                            <p>Average Slope: <span id="calculated-slope">0</span>%</p>
-                            <p>Slope Classification: <span id="slope-class">Flat</span></p>
-                        </div>
-                        <button onclick="proceedToStep2()">Continue to Step 2</button>
                     </div>
                 </div>
 
-                <!-- Step 2: Climate Data -->
-                <div class="step-content" id="step2-content">
-                    <h2>Step 2: Climate & Soil Data</h2>
-                    <form id="climate-form">
-                        <div class="form-group">
-                            <label for="rainfall">Annual Rainfall (mm):</label>
-                            <input type="number" id="rainfall" required min="100" max="3000" value="1025">
-                            <small>Source: WOCAT Benin data shows 1025mm average. Adjust for your region.</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="soil-type">Soil Type:</label>
-                            <select id="soil-type">
-                                <option value="sandy">Sandy (Coarse/Light)</option>
-                                <option value="loamy" selected>Loamy (Medium)</option>
-                                <option value="clay">Clay (Fine/Heavy)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="land-use">Land Use:</label>
-                            <select id="land-use">
-                                <option value="orchard">Fruit Orchard (Citrus, Cashew)</option>
-                                <option value="pasture">Pasture Rehabilitation</option>
-                                <option value="cropland">Cropland</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="organic-matter">Organic Matter Content:</label>
-                            <select id="organic-matter">
-                                <option value="low">Low (&lt;1%)</option>
-                                <option value="medium" selected>Medium (1-3%)</option>
-                                <option value="high">High (&gt;3%)</option>
-                            </select>
-                        </div>
-                        <div class="button-group">
-                            <button type="button" onclick="showSection('calculator', 1)">Back</button>
-                            <button type="button" onclick="calculateDesign()">Calculate Design</button>
-                        </div>
-                    </form>
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Analyzing terrain... This may take a few seconds.</p>
                 </div>
 
-                <!-- Step 3: Results -->
-                <div class="step-content" id="step3-content">
-                    <h2>Step 3: Earth Smile Design Results</h2>
-                    <div id="results-container" class="results-grid"></div>
-                    <div class="button-group">
-                        <button onclick="showSection('calculator', 2)">Back</button>
-                        <button onclick="proceedToStep4()">View Visualization</button>
+                <div class="plots-container">
+                    <div class="plot">
+                        <div class="plot-title">Elevation Map</div>
+                        <div id="elevationPlot"></div>
                     </div>
-                </div>
-
-                <!-- Step 4: Visualization -->
-                <div class="step-content" id="step4-content">
-                    <h2>Step 4: Design Visualization</h2>
-                    <div id="visualization-container">
-                        <div class="viz-controls">
-                            <label>View: </label>
-                            <select id="view-type" onchange="updateVisualization()">
-                                <option value="single">Single Structure</option>
-                                <option value="layout">Field Layout</option>
-                                <option value="cross-section">Cross Section</option>
-                            </select>
-                        </div>
-                        <canvas id="design-canvas" width="800" height="400"></canvas>
-                        <div id="layout-info" class="layout-details"></div>
+                    <div class="plot">
+                        <div class="plot-title">Slope Direction Analysis</div>
+                        <div id="slopePlot"></div>
                     </div>
-                    <div class="button-group">
-                        <button onclick="showSection('calculator', 3)">Back</button>
-                        <button onclick="generateReport()">Generate Project Report</button>
-                        <button onclick="resetCalculator()">New Calculation</button>
+                    <div class="plot">
+                        <div class="plot-title">Slope Steepness</div>
+                        <div id="steepnessPlot"></div>
+                    </div>
+                    <div class="plot">
+                        <div class="plot-title">3D Terrain Surface</div>
+                        <div id="3dPlot"></div>
                     </div>
                 </div>
             </div>
-        </section>
-    </main>
+        </div>
+    </div>
 
-    <footer>
-        <p>&copy; 2024 Earth Smiles Calculator. Based on WOCAT methodologies.</p>
-        <p>Developed by: Omar Yaseen, Mariam Najajrah, Hanadi Yosuf | Supervised by: Dr. Amjad Shatnawi</p>
-    </footer>
+    <script>
+        let coordinates = [];
 
-    <script src="js/main.js"></script>
-    <script src="js/calculator.js"></script>
-    <script src="js/visualization.js"></script>
+        function addCoordinate() {
+            const lon = parseFloat(document.getElementById('longitude').value);
+            const lat = parseFloat(document.getElementById('latitude').value);
+            
+            if (isNaN(lon) || isNaN(lat)) {
+                showError('Please enter valid longitude and latitude values.');
+                return;
+            }
+
+            coordinates.push([lon, lat]);
+            updateCoordinatesList();
+            clearInputs();
+            hideMessages();
+        }
+
+        function clearCoordinates() {
+            coordinates = [];
+            updateCoordinatesList();
+            hideMessages();
+        }
+
+        function loadSampleData() {
+            coordinates = [
+                [36.228512, 32.339083],
+                [36.229528, 32.336575],
+                [36.232664, 32.338719],
+                [36.231379, 32.339703],
+                [36.228512, 32.339083] // Close the polygon
+            ];
+            updateCoordinatesList();
+            showSuccess('Sample polygon loaded successfully!');
+        }
+
+        function updateCoordinatesList() {
+            const list = document.getElementById('coordinatesList');
+            list.innerHTML = '';
+            
+            coordinates.forEach((coord, index) => {
+                const item = document.createElement('div');
+                item.className = 'coordinate-item';
+                item.innerHTML = `
+                    <span>Point ${index + 1}: ${coord[0].toFixed(6)}, ${coord[1].toFixed(6)}</span>
+                    <button class="btn btn-danger" onclick="removeCoordinate(${index})" style="padding: 5px 10px; font-size: 12px;">Remove</button>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function removeCoordinate(index) {
+            coordinates.splice(index, 1);
+            updateCoordinatesList();
+        }
+
+        function clearInputs() {
+            document.getElementById('longitude').value = '';
+            document.getElementById('latitude').value = '';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+
+        function hideMessages() {
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+
+        function analyzeTerrain() {
+            if (coordinates.length < 3) {
+                showError('Please add at least 3 points to form a polygon.');
+                return;
+            }
+
+            // Close the polygon if not already closed
+            if (coordinates.length > 0) {
+                const first = coordinates[0];
+                const last = coordinates[coordinates.length - 1];
+                if (first[0] !== last[0] || first[1] !== last[1]) {
+                    coordinates.push([first[0], first[1]]);
+                }
+            }
+
+            document.getElementById('loading').style.display = 'block';
+            
+            // Simulate processing time
+            setTimeout(() => {
+                performTerrainAnalysis();
+                document.getElementById('loading').style.display = 'none';
+            }, 1000);
+        }
+
+        function performTerrainAnalysis() {
+            // Calculate area and perimeter
+            const { area, perimeter } = calculatePolygonArea(coordinates);
+            
+            // Generate elevation data
+            const elevationData = generateElevationData(coordinates);
+            
+            // Calculate slopes
+            const { slope, aspect } = calculateSlopes(elevationData);
+            
+            // Analyze slope directions
+            const slopeStats = analyzeSlopeDirections(slope, aspect);
+            
+            // Update statistics
+            updateStatistics(area, perimeter, elevationData, slopeStats);
+            
+            // Create plots
+            createPlots(elevationData, slope, aspect, slopeStats);
+            
+            showSuccess('Terrain analysis completed successfully!');
+        }
+
+        function calculatePolygonArea(coords) {
+            // Using shoelace formula
+            let area = 0;
+            let perimeter = 0;
+            const n = coords.length;
+            
+            for (let i = 0; i < n - 1; i++) {
+                const j = (i + 1) % (n - 1);
+                area += coords[i][0] * coords[j][1];
+                area -= coords[j][0] * coords[i][1];
+                
+                // Calculate distance for perimeter
+                const dx = (coords[j][0] - coords[i][0]) * 111320 * Math.cos(Math.PI * coords[i][1] / 180);
+                const dy = (coords[j][1] - coords[i][1]) * 110540;
+                perimeter += Math.sqrt(dx * dx + dy * dy);
+            }
+            
+            area = Math.abs(area) / 2 * 111320 * 110540;
+            
+            return { area, perimeter };
+        }
+
+        function generateElevationData(coords) {
+            const lons = coords.map(coord => coord[0]);
+            const lats = coords.map(coord => coord[1]);
+            
+            const minLon = Math.min(...lons);
+            const maxLon = Math.max(...lons);
+            const minLat = Math.min(...lats);
+            const maxLat = Math.max(...lats);
+            
+            const gridSize = 25;
+            const lonGrid = [];
+            const latGrid = [];
+            const elevation = [];
+            
+            for (let i = 0; i < gridSize; i++) {
+                lonGrid[i] = minLon + (maxLon - minLon) * i / (gridSize - 1);
+                latGrid[i] = minLat + (maxLat - minLat) * i / (gridSize - 1);
+                elevation[i] = [];
+                
+                for (let j = 0; j < gridSize; j++) {
+                    // Create realistic elevation pattern
+                    const baseElev = 680;
+                    const distX = (lonGrid[i] - minLon) / (maxLon - minLon);
+                    const distY = (latGrid[j] - minLat) / (maxLat - minLat);
+                    
+                    elevation[i][j] = baseElev + 8 * (0.7 - 0.4 * distX + 0.3 * distY) + Math.random() * 0.5;
+                }
+            }
+            
+            return { lonGrid, latGrid, elevation, minLon, maxLon, minLat, maxLat };
+        }
+
+        function calculateSlopes(elevationData) {
+            const { elevation, lonGrid, latGrid } = elevationData;
+            const gridSize = elevation.length;
+            const slope = [];
+            const aspect = [];
+            
+            const latCenter = (elevationData.minLat + elevationData.maxLat) / 2;
+            const latToM = 111320;
+            const lonToM = 111320 * Math.cos(Math.PI * latCenter / 180);
+            
+            const dxMeters = (lonGrid[1] - lonGrid[0]) * lonToM;
+            const dyMeters = (latGrid[1] - latGrid[0]) * latToM;
+            
+            for (let i = 0; i < gridSize; i++) {
+                slope[i] = [];
+                aspect[i] = [];
+                for (let j = 0; j < gridSize; j++) {
+                    let dz_dx, dz_dy;
+                    
+                    if (i === 0) {
+                        dz_dx = (elevation[i+1][j] - elevation[i][j]) / dxMeters;
+                    } else if (i === gridSize - 1) {
+                        dz_dx = (elevation[i][j] - elevation[i-1][j]) / dxMeters;
+                    } else {
+                        dz_dx = (elevation[i+1][j] - elevation[i-1][j]) / (2 * dxMeters);
+                    }
+                    
+                    if (j === 0) {
+                        dz_dy = (elevation[i][j+1] - elevation[i][j]) / dyMeters;
+                    } else if (j === gridSize - 1) {
+                        dz_dy = (elevation[i][j] - elevation[i][j-1]) / dyMeters;
+                    } else {
+                        dz_dy = (elevation[i][j+1] - elevation[i][j-1]) / (2 * dyMeters);
+                    }
+                    
+                    slope[i][j] = Math.atan(Math.sqrt(dz_dx * dz_dx + dz_dy * dz_dy)) * 180 / Math.PI;
+                    aspect[i][j] = (Math.atan2(-dz_dx, dz_dy) * 180 / Math.PI + 360) % 360;
+                }
+            }
+            
+            return { slope, aspect };
+        }
+
+        function analyzeSlopeDirections(slope, aspect) {
+            const directionBins = {
+                'N': [0, 22.5], 'NE': [22.5, 67.5], 'E': [67.5, 112.5],
+                'SE': [112.5, 157.5], 'S': [157.5, 202.5], 'SW': [202.5, 247.5],
+                'W': [247.5, 292.5], 'NW': [292.5, 337.5]
+            };
+            
+            const stats = {};
+            let totalPoints = 0;
+            
+            // Flatten arrays and count directions
+            const flatAspect = aspect.flat();
+            const flatSlope = slope.flat();
+            totalPoints = flatAspect.length;
+            
+            Object.keys(directionBins).forEach(dir => {
+                const [low, high] = directionBins[dir];
+                let count = 0;
+                let slopeSum = 0;
+                
+                flatAspect.forEach((asp, idx) => {
+                    let inRange = false;
+                    if (dir === 'N') {
+                        inRange = asp >= 337.5 || asp < 22.5;
+                    } else {
+                        inRange = asp >= low && asp < high;
+                    }
+                    
+                    if (inRange) {
+                        count++;
+                        slopeSum += flatSlope[idx];
+                    }
+                });
+                
+                if (count > 0) {
+                    stats[dir] = {
+                        percentage: (count / totalPoints) * 100,
+                        meanSlope: slopeSum / count,
+                        count: count
+                    };
+                }
+            });
+            
+            return stats;
+        }
+
+        function updateStatistics(area, perimeter, elevationData, slopeStats) {
+            document.getElementById('areaValue').textContent = `${(area/10000).toFixed(2)} ha`;
+            document.getElementById('perimeterValue').textContent = `${perimeter.toFixed(0)} m`;
+            
+            const flatElevation = elevationData.elevation.flat();
+            const minElev = Math.min(...flatElevation);
+            const maxElev = Math.max(...flatElevation);
+            document.getElementById('elevationRange').textContent = `${minElev.toFixed(1)} - ${maxElev.toFixed(1)} m`;
+            
+            if (Object.keys(slopeStats).length > 0) {
+                const dominant = Object.entries(slopeStats).reduce((a, b) => 
+                    a[1].percentage > b[1].percentage ? a : b
+                );
+                document.getElementById('dominantSlope').textContent = 
+                    `${dominant[0]} (${dominant[1].percentage.toFixed(1)}%)`;
+            }
+        }
+
+        function createPlots(elevationData, slope, aspect, slopeStats) {
+            const { lonGrid, latGrid, elevation } = elevationData;
+            
+            // Elevation Map
+            Plotly.newPlot('elevationPlot', [{
+                type: 'contour',
+                x: lonGrid,
+                y: latGrid,
+                z: elevation,
+                colorscale: 'Viridis',
+                contours: {
+                    coloring: 'heatmap'
+                },
+                colorbar: {
+                    title: 'Elevation (m)'
+                }
+            }], {
+                title: 'Elevation Contour Map',
+                xaxis: { title: 'Longitude' },
+                yaxis: { title: 'Latitude' }
+            });
+            
+            // Slope Direction Rose Diagram
+            if (Object.keys(slopeStats).length > 0) {
+                const directions = Object.keys(slopeStats);
+                const percentages = directions.map(dir => slopeStats[dir].percentage);
+                
+                Plotly.newPlot('slopePlot', [{
+                    type: 'bar',
+                    x: directions,
+                    y: percentages,
+                    marker: {
+                        color: percentages,
+                        colorscale: 'Viridis'
+                    }
+                }], {
+                    title: 'Slope Direction Distribution',
+                    xaxis: { title: 'Direction' },
+                    yaxis: { title: 'Percentage (%)' }
+                });
+            }
+            
+            // Slope Steepness
+            Plotly.newPlot('steepnessPlot', [{
+                type: 'contour',
+                x: lonGrid,
+                y: latGrid,
+                z: slope,
+                colorscale: 'Hot',
+                contours: {
+                    coloring: 'heatmap'
+                },
+                colorbar: {
+                    title: 'Slope (°)'
+                }
+            }], {
+                title: 'Slope Steepness Map',
+                xaxis: { title: 'Longitude' },
+                yaxis: { title: 'Latitude' }
+            });
+            
+            // 3D Surface
+            Plotly.newPlot('3dPlot', [{
+                type: 'surface',
+                x: lonGrid,
+                y: latGrid,
+                z: elevation,
+                colorscale: 'Viridis',
+                lighting: {
+                    ambient: 0.95,
+                    diffuse: 0.99,
+                    specular: 0.01
+                }
+            }], {
+                title: '3D Terrain Surface',
+                scene: {
+                    xaxis: { title: 'Longitude' },
+                    yaxis: { title: 'Latitude' },
+                    zaxis: { title: 'Elevation (m)' }
+                }
+            });
+        }
+
+        // Initialize with sample data
+        window.onload = loadSampleData;
+    </script>
 </body>
 </html>
